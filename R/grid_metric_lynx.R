@@ -13,6 +13,8 @@
 #' @param z_40 Maximum height for bin 2 (default: `12.1`).
 #' @param voxel_res Numeric, voxel resolution in the XY plane (default: `3`).
 #'
+#' @importFrom magrittr %>%
+#'
 #' @return A named list of flattened graph metrics from two vertical bins.
 #' @export
 connectivity_metrics_binned <- function(x, y, z,
@@ -37,7 +39,7 @@ connectivity_metrics_binned <- function(x, y, z,
     list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "bin_20_40_")
   )
 
-  las_all <- suppressMessages(LAS(data.frame(X = x, Y = y, Z = z)))
+  las_all <- suppressMessages(lidR::LAS(data.frame(X = x, Y = y, Z = z)))
 
   results <- purrr::map(bins, function(b) {
     tryCatch({
@@ -74,12 +76,12 @@ connectivity_metrics_binned <- function(x, y, z,
 compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
   load_graph_deps()
 
-  las_filtered <- filter_poi(las, Z > z_min & Z <= z_max)
+  las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())
   }
 
-  count_voxel <- voxel_metrics(las_filtered, ~list(point_count = length(Z)), res = voxel_res)
+  count_voxel <- lidR::voxel_metrics(las_filtered, ~list(point_count = length(Z)), res = voxel_res)
   voxel_df <- as.data.frame(count_voxel)
 
   required_cols <- c("X", "Y", "Z", "point_count")
@@ -95,32 +97,32 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
   pt_counts <- voxel_df$point_count[idx]
 
   nn <- dbscan::frNN(coords, eps = edge_thresh)
-  edges <- tibble(
+  edges <- dplyr::tibble(
     from = rep(seq_along(nn$id), lengths(nn$id)),
     to = unlist(nn$id)
   ) %>%
-    filter(from != to, from < to) %>%
-    mutate(weight = pt_counts[from] + pt_counts[to])
+    dplyr::filter(from != to, from < to) %>%
+    dplyr::mutate(weight = pt_counts[from] + pt_counts[to])
 
   g <- igraph::graph_from_data_frame(edges, directed = FALSE)
   E(g)$weight <- edges$weight
   E(g)$inv_weight <- 1 / pmax(E(g)$weight, 1e-6)
 
-  comps <- components(g)
+  comps <- igraph::components(g)
   results <- list(
-    mean_weighted_degree = mean(strength(g, weights = E(g)$inv_weight), na.rm = TRUE),
-    mean_betweenness = tryCatch(mean(betweenness(g, weights = E(g)$inv_weight), na.rm = TRUE), error = function(e) 0),
-    mean_closeness = tryCatch(mean(closeness(g, weights = E(g)$inv_weight), na.rm = TRUE), error = function(e) 0),
+    mean_weighted_degree = mean(igraph::strength(g, weights = E(g)$inv_weight), na.rm = TRUE),
+    mean_betweenness = tryCatch(mean(igraph::betweenness(g, weights = E(g)$inv_weight), na.rm = TRUE), error = function(e) 0),
+    mean_closeness = tryCatch(mean(igraph::closeness(g, weights = E(g)$inv_weight), na.rm = TRUE), error = function(e) 0),
     n_components = comps$no,
     avg_path_length = tryCatch({
-      d <- distances(g, weights = E(g)$inv_weight)
+      d <- igraph::distances(g, weights = E(g)$inv_weight)
       mean(d[is.finite(d) & d > 0], na.rm = TRUE)
     }, error = function(e) 0),
     eigen_ratio = tryCatch({
       pca <- prcomp(coords)
       pca$sdev[1] / pca$sdev[2]
     }, error = function(e) 0),
-    graph_density = tryCatch(edge_density(g), error = function(e) 0)
+    graph_density = tryCatch(igraph::edge_density(g), error = function(e) 0)
   )
 
   return(results)

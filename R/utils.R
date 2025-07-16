@@ -85,3 +85,6 @@ save_crs_to_folder <- function(crs, out_dir) {
   crs_txt <- file.path(out_dir, "crs.txt")
   writeLines(as.character(crs), crs_txt)
 }
+
+#' @importFrom magrittr %>%
+NULL

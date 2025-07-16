@@ -20,4 +20,5 @@ Imports:
     splines,
     stats,
     sf,
-    fst
+    fst,
+    magrittr

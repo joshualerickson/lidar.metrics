@@ -89,7 +89,11 @@ tree_detection <- function(x, y, z,
                                    "topo_residual_sd", "topo_entropy")))
     }
 
+    if(!is.null(out_dir)){
     coords <- sf::st_coordinates(trees)
+    out_path <- file.path(out_dir, paste0("X", round(mean(range(x)), 3), "_Y", round(mean(range(y)), 3), '.fst'))
+    fst::write_fst(as.data.frame(coords), out_path)
+    }
     z_vals <- trees$Z
     zbin <- cut(z_vals,
                 breaks = c(0.3, 6.1, 12.1, 24.1, 36.1, Inf),

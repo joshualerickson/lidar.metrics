@@ -13,7 +13,6 @@
 #' @param z_40 Maximum height for bin 2 (default: `12.1`).
 #' @param voxel_res Numeric, voxel resolution in the XY plane (default: `3`).
 #'
-#' @importFrom magrittr %>%
 #'
 #' @return A named list of flattened graph metrics from two vertical bins.
 #' @export

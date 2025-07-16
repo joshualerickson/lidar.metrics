@@ -1,0 +1,23 @@
+Package: lidar.metrics
+Type: Package
+Title: LiDAR-Based Canopy and Connectivity Metrics
+Version: 0.1.0
+Authors@R: 
+    person(given = "Joshua", family = "Erickson", email = "joshualerickson@gmail.com", role = c("aut", "cre"))
+Description: Calculates voxel-based graph theory metrics, canopy cover, leaf area density (LAD), and tree detection metrics from LiDAR point cloud data.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+    lidR,
+    dbscan,
+    igraph,
+    dplyr,
+    tibble,
+    purrr,
+    splines,
+    stats,
+    sf,
+    fst

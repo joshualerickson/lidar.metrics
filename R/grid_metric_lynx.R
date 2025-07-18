@@ -38,7 +38,11 @@ connectivity_metrics_binned <- function(x, y, z,
     list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "bin_20_40_")
   )
 
-  las_all <- suppressMessages(lidR::LAS(data.frame(X = x, Y = y, Z = z)))
+  las_all <- suppressMessages(lidR::LAS(data.frame(X = x,
+                                                   Y = y,
+                                                   Z = z)))
+
+  #las_all <- lidR::decimate_points(las_all, lidR::random_per_voxel(res = 3, 10))
 
   results <- purrr::map(bins, function(b) {
     tryCatch({
@@ -73,15 +77,24 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @return A named list of graph-theoretic metrics.
 #' @export
 compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
+
   load_graph_deps()
 
+  las <- lidR::decimate_points(las, lidR::random_per_voxel(res = 3, n = 10))
+
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
+
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())
   }
 
-  count_voxel <- lidR::voxel_metrics(las_filtered, ~list(point_count = length(Z)), res = voxel_res)
-  voxel_df <- as.data.frame(count_voxel)
+  voxel_df <- lidR::voxel_metrics(
+    las_filtered,
+    func = ~list(point_count = length(Z)),
+    res = voxel_res
+  )
+
+  voxel_df <- as.data.frame(voxel_df)
 
   required_cols <- c("X", "Y", "Z", "point_count")
   if (!all(required_cols %in% names(voxel_df))) {
@@ -94,6 +107,8 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
   coords <- voxel_df[idx, c("X", "Y", "Z")]
   coords <- as.matrix(data.frame(lapply(coords, as.numeric)))
   pt_counts <- voxel_df$point_count[idx]
+
+
 
   nn <- dbscan::frNN(coords, eps = edge_thresh)
   edges <- dplyr::tibble(
@@ -126,4 +141,5 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   return(results)
 }
+
 

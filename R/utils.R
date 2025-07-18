@@ -9,23 +9,23 @@
 named_zero_metrics <- function(type = 'graph') {
   if (type == 'graph') {
     return(list(
-      mean_weighted_degree = NA_real_,
-      mean_betweenness = NA_real_,
-      mean_closeness = NA_real_,
-      n_components = NA_real_,
-      avg_path_length = NA_real_,
-      eigen_ratio = NA_real_,
-      graph_density = NA_real_
+      mean_weighted_degree = 0,
+      mean_betweenness = 0,
+      mean_closeness = 0,
+      n_components = 0,
+      avg_path_length = 0,
+      eigen_ratio = 0,
+      graph_density = 0
     ))
   } else if (type == 'canopy') {
     return(list(
-      n_trees = NA_real_,
-      trees_per_acre = NA_real_,
-      n_low = NA_real_,
-      n_low_mid = NA_real_,
-      n_mid = NA_real_,
-      n_mid_upper = NA_real_,
-      n_upper = NA_real_,
+      n_trees = 0,
+      trees_per_acre = 0,
+      n_low = 0,
+      n_low_mid = 0,
+      n_mid = 0,
+      n_mid_upper = 0,
+      n_upper = 0,
       topo_residual_sd = NA_real_,
       topo_entropy = NA_real_,
       fractional_canopy_cover = NA_real_,
@@ -53,6 +53,7 @@ load_graph_deps <- function() {
   }
   invisible(TRUE)
 }
+
 
 #' Remove Named Objects Safely from Environment and Trigger Garbage Collection
 #'
@@ -88,3 +89,4 @@ save_crs_to_folder <- function(crs, out_dir) {
 
 #' @importFrom magrittr %>%
 NULL
+

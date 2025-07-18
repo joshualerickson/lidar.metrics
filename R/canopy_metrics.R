@@ -89,8 +89,9 @@ tree_detection <- function(x, y, z,
                                    "topo_residual_sd", "topo_entropy")))
     }
 
-    if(!is.null(out_dir)){
     coords <- sf::st_coordinates(trees)
+
+    if(!is.null(out_dir)){
     out_path <- file.path(out_dir, paste0("X", round(mean(range(x)), 3), "_Y", round(mean(range(y)), 3), '.fst'))
     fst::write_fst(as.data.frame(coords), out_path)
     }

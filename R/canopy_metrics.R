@@ -1,37 +1,43 @@
-#' Compute Canopy Cover and Tree Metrics
+#' Compute Canopy Cover
 #'
-#' Calculates canopy cover, tree strata metrics, and leaf area density metrics
+#' Calculates canopy cover, and leaf area density metrics
 #' for a small area of LiDAR point cloud data.
 #'
 #' @param x Numeric vector of X coordinates.
 #' @param y Numeric vector of Y coordinates.
 #' @param z Numeric vector of Z (height) values.
 #' @param return_number Integer vector of return numbers (e.g., from LAS file).
-#' @param window_func Function that returns variable window size for tree detection (e.g., based on height).
-#' @param out_dir Directory path for saving optional outputs (currently unused).
 #'
 #' @return A named list with metrics including:
 #' \itemize{
 #'   \item \code{fractional_canopy_cover}
-#'   \item \code{n_trees}, \code{trees_per_acre}, and strata-specific counts
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
-#'   \item \code{topo_residual_sd} and \code{topo_entropy}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number,
-                                 window_func, out_dir) {
+canopy_cover_metrics <- function(x, y, z, return_number) {
+
   if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
 
-  trees <- tree_detection(x, y, z, window_func = window_func, out_dir = out_dir)
+  las_all <- suppressMessages(lidR::LAS(data.frame(X = x,
+                                                   Y = y,
+                                                   Z = z,
+                                                   ReturnNumber = return_number)))
 
-  first_above <- sum(z > 2 & return_number == 1)
-  total_first <- sum(return_number == 1)
-  canopy_cover <- ifelse(total_first == 0, NA_real_, first_above / total_first)
+
+  las_decimate <- lidR::decimate_points(las_all, lidR::random_per_voxel(res = 3, n = 10))
+
+  first_above <- lidR::filter_poi(las_decimate, Z > 2 & ReturnNumber == 1)
+
+  total_first <- lidR::filter_poi(las_decimate, ReturnNumber == 1)
+
+  canopy_cover <- tryCatch({length(first_above@data$Z) /
+                           length(total_first@data$Z)}, error = NA_real_)
+
   cc <- list(fractional_canopy_cover = canopy_cover)
 
-  lad <- lad_metrics(z, dz = 1, z0 = 2)
+  lad <- lad_metrics(las_decimate@data$Z, dz = 1, z0 = 2)
 
-  return(c(trees, lad, cc))
+  return(c(lad, cc))
 }
 
 
@@ -162,6 +168,7 @@ tree_detection <- function(x, y, z,
 #' }
 #' @export
 lad_metrics <- function(z, dz = 1, k = 0.5, z0 = 2) {
+
   tryCatch({
     profile <- lidR::LAD(z, dz = dz, k = k, z0 = z0)
 

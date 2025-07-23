@@ -19,6 +19,14 @@ named_zero_metrics <- function(type = 'graph') {
     ))
   } else if (type == 'canopy') {
     return(list(
+      fractional_canopy_cover = NA_real_,
+      LAI = NA_real_,
+      LAD_max = NA_real_,
+      LAD_mean = NA_real_,
+      LAD_z_max = NA_real_
+    ))
+  } else if (type == 'trees') {
+    return(list(
       n_trees = 0,
       trees_per_acre = 0,
       n_low = 0,
@@ -27,12 +35,7 @@ named_zero_metrics <- function(type = 'graph') {
       n_mid_upper = 0,
       n_upper = 0,
       topo_residual_sd = NA_real_,
-      topo_entropy = NA_real_,
-      fractional_canopy_cover = NA_real_,
-      LAI = NA_real_,
-      LAD_max = NA_real_,
-      LAD_mean = NA_real_,
-      LAD_z_max = NA_real_
+      topo_entropy = NA_real_
     ))
   } else {
     stop("Invalid type. Must be 'graph' or 'canopy'.")

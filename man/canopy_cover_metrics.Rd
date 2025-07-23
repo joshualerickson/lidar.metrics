@@ -2,9 +2,9 @@
 % Please edit documentation in R/canopy_metrics.R
 \name{canopy_cover_metrics}
 \alias{canopy_cover_metrics}
-\title{Compute Canopy Cover and Tree Metrics}
+\title{Compute Canopy Cover}
 \usage{
-canopy_cover_metrics(x, y, z, return_number, window_func, out_dir)
+canopy_cover_metrics(x, y, z, return_number)
 }
 \arguments{
 \item{x}{Numeric vector of X coordinates.}
@@ -14,21 +14,15 @@ canopy_cover_metrics(x, y, z, return_number, window_func, out_dir)
 \item{z}{Numeric vector of Z (height) values.}
 
 \item{return_number}{Integer vector of return numbers (e.g., from LAS file).}
-
-\item{window_func}{Function that returns variable window size for tree detection (e.g., based on height).}
-
-\item{out_dir}{Directory path for saving optional outputs (currently unused).}
 }
 \value{
 A named list with metrics including:
 \itemize{
 \item \code{fractional_canopy_cover}
-\item \code{n_trees}, \code{trees_per_acre}, and strata-specific counts
 \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
-\item \code{topo_residual_sd} and \code{topo_entropy}
 }
 }
 \description{
-Calculates canopy cover, tree strata metrics, and leaf area density metrics
+Calculates canopy cover, and leaf area density metrics
 for a small area of LiDAR point cloud data.
 }

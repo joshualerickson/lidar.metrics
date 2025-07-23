@@ -80,9 +80,10 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   load_graph_deps()
 
-  las <- lidR::decimate_points(las, lidR::random_per_voxel(res = 3, n = 10))
-
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
+
+  las_filtered <- lidR::decimate_points(las_filtered, lidR::homogenize(res = 1, density = 5))
+
 
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())

@@ -21,7 +21,6 @@ connectivity_metrics_binned <- function(x, y, z,
                                         z_1 = 0.3,
                                         z_20 = 6.1,
                                         z_40 = 12.1,
-                                        psid,
                                         voxel_res = 3) {
 
   metric_names <- c(
@@ -35,8 +34,8 @@ connectivity_metrics_binned <- function(x, y, z,
   )
 
   bins <- list(
-    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "bin_1_20_", psid = psid),
-    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "bin_20_40_", psid = psid)
+    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "bin_1_20_"),
+    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "bin_20_40_")
   )
 
   las_all <- suppressMessages(lidR::LAS(data.frame(X = x,
@@ -52,8 +51,7 @@ connectivity_metrics_binned <- function(x, y, z,
         z_min = b$zmin,
         z_max = b$zmax,
         edge_thresh = b$edge_thresh,
-        voxel_res = b$voxel_res,
-        psid = b$psid
+        voxel_res = b$voxel_res
       )
       setNames(out, paste0(b$prefix, names(out)))
     }, error = function(cond) {
@@ -78,13 +76,10 @@ connectivity_metrics_binned <- function(x, y, z,
 #'
 #' @return A named list of graph-theoretic metrics.
 #' @export
-compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, psid) {
+compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   load_graph_deps()
 
-  unique_psids <- unique(psid)
-
-  # Proceed with normal filtering and voxel metrics
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
 
 

@@ -18,13 +18,7 @@
 #' }
 #' @export
 tree_detection <- function(x, y, z,
-                           window_func = function(x) {
-                             w <- pmax(x, 1)
-                             w <- log1p(w) * 1.5 + 2
-                             w <- pmin(w, 6)
-                             w[is.na(w) | w <= 0] <- 3
-                             return(w)
-                           }
+                           window_func = function(x) {x*0.17 + 3}
                            ) {
   load_graph_deps()
 

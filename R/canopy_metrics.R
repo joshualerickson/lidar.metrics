@@ -14,7 +14,7 @@
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number) {
+canopy_cover_metrics <- function(x, y, z, return_number, z_min=3, z_dens=8) {
 
   if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
 
@@ -26,10 +26,10 @@ canopy_cover_metrics <- function(x, y, z, return_number) {
     ReturnNumber = ifelse(return_number > 7, 7L, return_number)
   )))
 
-  las_all <- lidR::decimate_points(las_all, lidR::homogenize(res = 1, density = 5))
+  las_all <- lidR::decimate_points(las_all, lidR::homogenize(res = 1, density = z_dens))
 
 
-  first_above <- lidR::filter_poi(las_all, Z > 2 & ReturnNumber == 1)
+  first_above <- lidR::filter_poi(las_all, Z > z_min & ReturnNumber == 1)
 
   total_first <- lidR::filter_poi(las_all, ReturnNumber == 1)
 

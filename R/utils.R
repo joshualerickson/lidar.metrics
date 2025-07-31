@@ -77,7 +77,7 @@ las_decimate_by_scan_and_density <- function(las, voxel_res = 3,
   if (is.empty(las)) return(las)
 
   # Get voxel-based point count (local density proxy)
-  voxel_density <- voxel_metrics(las, ~length(Z), res = voxel_res)
+  voxel_density <- lidR::voxel_metrics(las, ~length(Z), res = voxel_res)
   voxel_density_df <- as.data.frame(voxel_density)
 
   # Join voxel point counts back to points

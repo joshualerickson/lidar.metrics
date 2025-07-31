@@ -30,7 +30,7 @@ connectivity_metrics_binned <- function(x, y, z,
                                         density_scale) {
 
   metric_names <- c(
-    "mean_weighted_degree",
+    "mean_degree",
     "mean_betweenness",
     "mean_closeness",
     "n_components",

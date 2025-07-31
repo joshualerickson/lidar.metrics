@@ -14,36 +14,58 @@
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number) {
-
+canopy_cover_metrics <- function(x, y, z, return_number, scan_angle,
+                                 voxel_res = 3,
+                                 angle_scale, density_scale) {
+  # Safety check for low point count
   if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
 
-
+  # Create LAS
   las_all <- suppressMessages(lidR::LAS(data.frame(
     X = x,
     Y = y,
     Z = z,
-    ReturnNumber = ifelse(return_number > 7, 7L, return_number)
+    ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)),
+    ScanAngle = scan_angle
   )))
 
-  las_all <- lidR::decimate_points(las_all, lidR::homogenize(res = 1, density = 5))
+  if (is.empty(las_all)) return(named_zero_metrics(type = 'canopy'))
 
+  # Decimate
+  las_all <- las_decimate_by_scan_and_density(
+    las_all,
+    voxel_res = voxel_res,
+    angle_scale = angle_scale,
+    density_scale = density_scale
+  )
 
+  # Check after decimation
+  if (is.empty(las_all)) return(named_zero_metrics(type = 'canopy'))
+
+  # Canopy cover
   first_above <- lidR::filter_poi(las_all, Z > 2 & ReturnNumber == 1)
-
   total_first <- lidR::filter_poi(las_all, ReturnNumber == 1)
 
-  canopy_cover <- tryCatch({length(first_above@data$Z) /
-      length(total_first@data$Z)}, error = NA_real_)
+  canopy_cover <- tryCatch({
+    if (length(total_first@data$Z) == 0) NA_real_
+    else length(first_above@data$Z) / length(total_first@data$Z)
+  }, error = function(e) NA_real_)
 
-  cc <- list(fractional_canopy_cover = canopy_cover)
+  # LAD
+  lad <- tryCatch(
+    lad_metrics(las_all@data$Z, dz = 1, z0 = 2),
+    error = function(e) named_zero_metrics(type = 'canopy')
+  )
 
-  lad <- lad_metrics(las_all@data$Z, dz = 1, z0 = 2)
+  # Final output as valid named list
+  out <- c(
+    lad,
+    list(fractional_canopy_cover = canopy_cover)
+  )
 
-  return(c(lad
-           , cc
-           ))
+  return(out)
 }
+
 
 #' Leaf Area Density Metrics
 #'

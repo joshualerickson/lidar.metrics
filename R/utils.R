@@ -2,19 +2,19 @@
 #'
 #' Provides default NA values for graph or canopy metrics when input data is insufficient.
 #'
-#' @param type Character string, either `"graph"` or `"canopy"`. Determines which metric structure to return.
+#' @param type Character string, either `"graph"`, `"canopy"` or `"trees"`. Determines which metric structure to return.
 #'
 #' @return A named list of metrics filled with `NA_real_` values appropriate to the type.
 #' @export
 named_zero_metrics <- function(type = 'graph') {
   if (type == 'graph') {
     return(list(
-      mean_weighted_degree = 0,
+      mean_degree = 0,
       mean_betweenness = 0,
-      mean_closeness = 0,
-      n_components = 0,
-      avg_path_length = 0,
-      eigen_ratio = 0,
+      mean_closeness = NA_real_,
+      n_components = NA_real_,
+      avg_path_length = NA_real_,
+      eigen_ratio = NA_real_,
       graph_density = 0
     ))
   } else if (type == 'canopy') {
@@ -50,7 +50,7 @@ named_zero_metrics <- function(type = 'graph') {
 #' @return Invisibly returns `TRUE` if all packages are successfully loaded.
 #' @export
 load_graph_deps <- function() {
-  pkgs <- c("lidR", "dbscan", "igraph", "dplyr", "tibble", "purrr", "stats")
+  pkgs <- c("lidR", "dbscan", "igraph", "dplyr", "tibble", "purrr", "stats", "geometry")
   for (pkg in pkgs) {
     suppressMessages(require(pkg, character.only = TRUE))
   }
@@ -58,38 +58,116 @@ load_graph_deps <- function() {
 }
 
 
-#' Remove Named Objects Safely from Environment and Trigger Garbage Collection
+#' Decimate LiDAR Point Cloud by Scan Angle and Local Density
 #'
-#' Removes objects passed via `...` if they exist in the current environment.
+#' Applies spatial decimation to a LAS object based on both scan angle and
+#' local voxel point density, reducing sampling artifacts.
 #'
-#' @param ... Character names of objects to remove.
+#' @param las A LAS object from the `lidR` package.
+#' @param voxel_res Resolution of voxel used for density estimation (default = 3).
+#' @param angle_scale Scaling factor for decimating by scan angle.
+#' @param density_scale Scaling factor for decimating by local density.
 #'
-#' @return Called for side effects. Triggers `gc()`.
+#' @return A decimated LAS object.
 #' @export
-safe_cleanup <- function(...) {
-  for (obj in list(...)) {
-    if (exists(obj, inherits = FALSE)) {
-      rm(list = obj, inherits = FALSE)
-    }
+
+las_decimate_by_scan_and_density <- function(las, voxel_res = 3,
+                                             angle_scale = 1/15,
+                                             density_scale = 1/10) {
+  if (is.empty(las)) return(las)
+
+  # Get voxel-based point count (local density proxy)
+  voxel_density <- voxel_metrics(las, ~length(Z), res = voxel_res)
+  voxel_density_df <- as.data.frame(voxel_density)
+
+  # Join voxel point counts back to points
+  las_coords <- as.data.frame(las@data[, c("X", "Y", "Z")])
+  voxel_ids <- paste(round(las_coords$X / voxel_res),
+                     round(las_coords$Y / voxel_res),
+                     round(las_coords$Z / voxel_res), sep = "_")
+
+  voxel_density_df$id <- paste(round(voxel_density_df$X / voxel_res),
+                               round(voxel_density_df$Y / voxel_res),
+                               round(voxel_density_df$Z / voxel_res), sep = "_")
+
+  match_idx <- match(voxel_ids, voxel_density_df$id)
+  las@data$local_density <- voxel_density_df$Z[match_idx]
+
+  # Now compute decimation weights
+  las@data$decim_wt <- compute_decimation_weights(
+    scan_angle = las@data$ScanAngle,
+    local_density = las@data$local_density,
+    angle_scale = angle_scale,
+    density_scale = density_scale
+  )
+
+  # Sample points with inverse probability
+  keep <- runif(nrow(las@data)) > las@data$decim_wt
+  return(filter_poi(las, keep))
+}
+
+
+#' Compute Weights for LiDAR Point Decimation
+#'
+#' Computes decimation weights based on scan angle and local point density,
+#' which are used to reduce LiDAR sampling bias.
+#'
+#' @param scan_angle Vector of scan angle values.
+#' @param local_density Estimated local point density per voxel.
+#' @param angle_scale Scaling factor for scan angle term (default = 1/15).
+#' @param density_scale Scaling factor for density term (default = 1/10).
+#'
+#' @return A numeric vector of decimation weights between 0 and 1.
+#' @export
+
+compute_decimation_weights <- function(scan_angle, local_density,
+                                       angle_scale = 1/15,
+                                       density_scale = 1/10) {
+  # Normalize both and take geometric mean
+  angle_term <- pmin(1, abs(scan_angle) * angle_scale)
+  density_term <- pmin(1, local_density * density_scale)
+
+  decimation_weight <- (angle_term + density_term) / 2
+  return(decimation_weight)
+}
+
+#' Compute Voxel-Level Structure Metrics
+#'
+#' Calculates structural metrics for a voxel such as convex hull volume
+#' (normalized), spatial variance, and point count.
+#'
+#' @param z Z coordinates (height) within the voxel.
+#' @param x X coordinates within the voxel.
+#' @param y Y coordinates within the voxel.
+#'
+#' @return A named list with `convex_hull_vol`, `norm_var`, and `point_count`.
+#' @export
+
+voxel_structure_metrics <- function(z, x, y) {
+  coords <- cbind(x, y, z)
+
+  # If not enough points, return fallback values
+  if (nrow(coords) < 4) {
+    var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
+    return(list(
+      convex_hull_vol = 0,
+      norm_var = var_xyz,
+      point_count = nrow(coords)
+    ))
   }
-  gc()
+
+  # Try computing 3D convex hull volume
+  hull_volume <- tryCatch({
+    ch <- geometry::convhulln(coords, options = "FA")
+    as.numeric(ch$vol)
+  }, error = function(e) 0)
+
+  # Compute normalized variance of spatial coordinates
+  var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
+
+  return(list(
+    convex_hull_vol = log1p(hull_volume/nrow(coords)),
+    norm_var = var_xyz,
+    point_count = nrow(coords)
+  ))
 }
-
-#' Save CRS (Coordinate Reference System) to a Folder as Text File
-#'
-#' Writes the string representation of a CRS object to a `crs.txt` file in a folder.
-#'
-#' @param crs An object of class `crs` or string. Usually obtained via `terra::crs()` or `sf::st_crs()`.
-#' @param out_dir Output directory path where the `crs.txt` file should be saved.
-#'
-#' @return Called for side effects. Creates a file at `out_dir/crs.txt`.
-#' @export
-save_crs_to_folder <- function(crs, out_dir) {
-  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
-  crs_txt <- file.path(out_dir, "crs.txt")
-  writeLines(as.character(crs), crs_txt)
-}
-
-#' @importFrom magrittr %>%
-NULL
-

@@ -19,20 +19,18 @@ are returned for both all and first returns:
 \item Kurtosis
 \item Skewness
 \item Standard deviation
-\item Total number of returns
-\item Proportion of returns in that bin
 }
 }
 \description{
 Computes vertical distribution metrics for LiDAR return heights, stratified by predefined
-elevation bins (e.g., 0–0.5 m, 0.5–1 m, ..., 64+ m). Returns statistics for both all returns
+elevation bins (e.g., 0.5-6.1, ..., 64+ m). Returns statistics for both all returns
 and first returns in each vertical bin. This is useful for assessing canopy structure, layering,
 and vertical complexity in forest stands.
 }
 \details{
 The vertical strata are defined as follows (in meters):
 \preformatted{
-  0–0.5, 0.5–1, 1–2, 2–4, 4–8, 8–16, 16–32, 32–48, 48–64, 64+
+  0.5-6.1, 6.1–16, 16–32, 32–48, 48–64, 64+
 }
 Prefixes:
 \describe{

@@ -4,7 +4,16 @@
 \alias{canopy_cover_metrics}
 \title{Compute Canopy Cover}
 \usage{
-canopy_cover_metrics(x, y, z, return_number)
+canopy_cover_metrics(
+  x,
+  y,
+  z,
+  return_number,
+  scan_angle,
+  voxel_res = 3,
+  angle_scale,
+  density_scale
+)
 }
 \arguments{
 \item{x}{Numeric vector of X coordinates.}

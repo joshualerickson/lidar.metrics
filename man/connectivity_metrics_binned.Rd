@@ -2,17 +2,20 @@
 % Please edit documentation in R/grid_metric_lynx.R
 \name{connectivity_metrics_binned}
 \alias{connectivity_metrics_binned}
-\title{Compute Graph-Based Connectivity Metrics in Vertical Bins}
+\title{Compute Binned Graph Connectivity Metrics from LiDAR Point Cloud}
 \usage{
 connectivity_metrics_binned(
   x,
   y,
   z,
   edge_thresh_values = c(3, 3),
-  z_1 = 0.3,
-  z_20 = 6.1,
-  z_40 = 12.1,
-  voxel_res = 3
+  z_1 = 1,
+  z_20 = 3,
+  z_40 = 9,
+  voxel_res = 3,
+  scan_angle,
+  angle_scale,
+  density_scale
 )
 }
 \arguments{
@@ -22,21 +25,27 @@ connectivity_metrics_binned(
 
 \item{z}{Z (height) values of LiDAR points.}
 
-\item{edge_thresh_values}{Numeric vector of edge thresholds (e.g., \verb{[3, 3]}) for each vertical bin.}
+\item{edge_thresh_values}{Numeric vector of edge thresholds (e.g., c(3, 3)) for each vertical bin.}
 
-\item{z_1}{Minimum height threshold (default: \code{0.3}).}
+\item{z_1}{Lower height threshold (default: 1 m).}
 
-\item{z_20}{Threshold separating bin 1 from bin 2 (default: \code{6.1}).}
+\item{z_20}{Midstory lower bound (default: 3 m).}
 
-\item{z_40}{Maximum height for bin 2 (default: \code{12.1}).}
+\item{z_40}{Midstory upper bound (default: 9 m).}
 
-\item{voxel_res}{Numeric, voxel resolution in the XY plane (default: \code{3}).}
+\item{voxel_res}{Numeric, voxel resolution in XY plane (default: 3).}
+
+\item{scan_angle}{Numeric vector of scan angles from the LAS file.}
+
+\item{angle_scale}{Scaling factor to adjust decimation based on scan angle.}
+
+\item{density_scale}{Scaling factor to adjust decimation based on local point density.}
 }
 \value{
-A named list of flattened graph metrics from two vertical bins.
+A named list of graph-theoretic metrics for each bin (understory, midstory).
 }
 \description{
 Calculates graph-theoretic metrics (e.g., betweenness, closeness, path length)
-for voxels within user-defined height bins. This is intended to assess forest
-structure connectivity relevant to wildlife habitat (e.g., for lynx).
+for voxelized LiDAR data within vertical height bins. This function is used to
+assess 3D structural connectivity (e.g., for wildlife habitat like lynx).
 }

@@ -7,7 +7,7 @@
 named_zero_metrics(type = "graph")
 }
 \arguments{
-\item{type}{Character string, either \code{"graph"} or \code{"canopy"}. Determines which metric structure to return.}
+\item{type}{Character string, either \code{"graph"}, \code{"canopy"} or \code{"trees"}. Determines which metric structure to return.}
 }
 \value{
 A named list of metrics filled with \code{NA_real_} values appropriate to the type.

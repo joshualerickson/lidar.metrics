@@ -2,25 +2,38 @@
 % Please edit documentation in R/grid_metric_lynx.R
 \name{compute_graph_metrics}
 \alias{compute_graph_metrics}
-\title{Compute Graph Metrics for a Filtered LAS Within a Vertical Bin}
+\title{Compute Graph Metrics for a Voxelized Vertical Bin}
 \usage{
-compute_graph_metrics(las, z_min, z_max, edge_thresh, voxel_res)
+compute_graph_metrics(
+  las,
+  z_min,
+  z_max,
+  edge_thresh,
+  voxel_res,
+  angle_scale,
+  density_scale
+)
 }
 \arguments{
-\item{las}{A LAS object (point cloud) from the \code{lidR} package.}
+\item{las}{A LAS object (LiDAR point cloud) from the \code{lidR} package.}
 
-\item{z_min}{Minimum Z height threshold.}
+\item{z_min}{Minimum Z height to include in bin.}
 
-\item{z_max}{Maximum Z height threshold.}
+\item{z_max}{Maximum Z height to include in bin.}
 
-\item{edge_thresh}{Numeric, distance threshold for creating edges.}
+\item{edge_thresh}{Distance threshold (in meters) for connecting centroids.}
 
-\item{voxel_res}{Numeric, XY voxel resolution.}
+\item{voxel_res}{Numeric voxel resolution for binning.}
+
+\item{angle_scale}{Scaling factor for decimating based on scan angle.}
+
+\item{density_scale}{Scaling factor for decimating based on point density.}
 }
 \value{
-A named list of graph-theoretic metrics.
+A named list of graph metrics.
 }
 \description{
-Creates a voxel-based graph using a fixed edge threshold, and calculates graph
-metrics such as weighted degree, betweenness, closeness, and component structure.
+Calculates key graph-theoretic metrics for a filtered LAS object, including
+strength, degree, betweenness, closeness, and more. Uses convex hull volume
+as edge weights.
 }

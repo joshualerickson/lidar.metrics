@@ -112,7 +112,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, ang
 
   voxel_df <- lidR::voxel_metrics(
     las_filtered,
-    func = ~voxel_structure_metrics(Z, X, Y),
+    func = ~lidar.metrics::voxel_structure_metrics(Z, X, Y),
     res = voxel_res
   )
 

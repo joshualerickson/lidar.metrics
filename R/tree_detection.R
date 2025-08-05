@@ -1,11 +1,34 @@
+
+#' Detect Trees and Compute Structural Metrics from a LiDAR Tile
+#'
+#' Applies a local maxima filter with an adaptive window function to detect trees,
+#' classifies them into vertical strata, and calculates both vertical structural
+#' complexity and spatial smoothness metrics. Designed to be used within
+#' `lidR::pixel_metrics()` for tile-based LAScatalog processing.
+#'
+#' @param x Numeric vector of X coordinates of LiDAR points.
+#' @param y Numeric vector of Y coordinates of LiDAR points.
+#' @param z Numeric vector of Z (height) values of LiDAR points.
+#' @param window_func A function that returns a scalar window size given a vector of Z values.
+#'        Used in `lidR::lmf()` for local maxima filtering. The default function is based
+#'        on log-scaling and height-based branching logic.
+#'
+#' @return A named list containing:
+#' \describe{
+#'   \item{n_trees}{Total number of detected trees.}
+#'   \item{trees_per_acre}{Number of detected trees per 0.222395 ha (≈0.55 acres).}
+#'   \item{n_low, n_low_mid, n_mid, n_mid_upper, n_upper}{Counts of trees in fixed height strata: 0.3–6.1 m, 6.1–12.1 m, 12.1–24.1 m, 24.1–36.1 m, >36.1 m.}
+#'   \item{n_0_6_1, n_0_12_1, n_0_24_1, n_0_36_1, n_0_Inf}{Cumulative counts of trees taller than 0.3 m up to given height thresholds.}
+#'   \item{n_gt_6_1, n_gt_12_1, n_gt_24_1, n_gt_36_1}{Counts of trees taller than each specified threshold.}
+#'   \item{topo_residual_sd}{Standard deviation of residuals from a 2D spline surface fit to tree heights (spatial topographic variation).}
+#'   \item{topo_entropy}{Shannon entropy of the residual distribution (complexity of vertical deviation).}
+#'   \item{smoothness_score}{Composite structural score combining scaled `topo_residual_sd` and `topo_entropy`.}
+#' }
+#'
+#' @seealso \code{\link[lidR]{lmf}}, \code{\link[lidR]{locate_trees}}, \code{\link{named_zero_metrics}}
+#' @export
 tree_detection <- function(x, y, z,
-                           window_func = function(x) {
-                             w <- pmax(x, 1)
-                             w <- log1p(w) * 1.5 + 2
-                             w <- pmin(w, 6)
-                             w[is.na(w) | w <= 0] <- 3
-                             return(w)
-                           }) {
+                           window_func = function(x) {ifelse(x*0.25 < 1, 1, x*0.25)}) {
   load_graph_deps()
 
   tryCatch({

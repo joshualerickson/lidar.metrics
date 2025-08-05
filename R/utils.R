@@ -29,13 +29,17 @@ named_zero_metrics <- function(type = 'graph') {
     return(list(
       n_trees = 0,
       trees_per_acre = 0,
-      n_low = 0,
-      n_low_mid = 0,
-      n_mid = 0,
-      n_mid_upper = 0,
-      n_upper = 0,
+      n_strata_low = 0,
+      n_strata_low_mid = 0,
+      n_strata_mid = 0,
+      n_strata_mid_upper = 0,
+      n_strata_upper = 0,
+      n_gt_6_1 = 0,
+      n_gt_12_1 = 0,
+      n_gt_24_1 = 0,
       topo_residual_sd = NA_real_,
-      topo_entropy = NA_real_
+      topo_entropy = NA_real_,
+      smoothness_score = NA_real_
     ))
   } else {
     stop("Invalid type. Must be 'graph' or 'canopy'.")
@@ -171,3 +175,4 @@ voxel_structure_metrics <- function(z, x, y) {
     point_count = nrow(coords)
   ))
 }
+

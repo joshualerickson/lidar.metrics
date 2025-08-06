@@ -2,41 +2,48 @@
 % Please edit documentation in R/tree_detection.R
 \name{tree_detection}
 \alias{tree_detection}
-\title{Detect Trees and Compute Strata Metrics}
+\title{Detect Trees and Compute Structural Metrics from a LiDAR Tile}
 \usage{
 tree_detection(
   x,
   y,
   z,
+  return_number,
   window_func = function(x) {
-     w <- pmax(x, 1)
-     w <- log1p(w) * 1.5 + 2
-     w <-
-    pmin(w, 6)
-     w[is.na(w) | w <= 0] <- 3
-     return(w)
+     ifelse(x * 0.25 < 1, 1, x * 0.25)
  }
 )
 }
 \arguments{
-\item{x}{Numeric vector of X coordinates.}
+\item{x}{Numeric vector of X coordinates of LiDAR points.}
 
-\item{y}{Numeric vector of Y coordinates.}
+\item{y}{Numeric vector of Y coordinates of LiDAR points.}
 
-\item{z}{Numeric vector of Z (height) values.}
+\item{z}{Numeric vector of Z (height) values of LiDAR points.}
 
-\item{window_func}{Function that returns a window size for tree detection.}
+\item{window_func}{A function that returns a scalar window size given a vector of Z values.
+Used in \code{lidR::lmf()} for local maxima filtering. The default function is based
+on log-scaling and height-based branching logic.}
 }
 \value{
-A named list of tree metrics:
-\itemize{
-\item \code{n_trees}, \code{trees_per_acre}
-\item \code{n_low}, \code{n_low_mid}, \code{n_mid}, \code{n_mid_upper}, \code{n_upper}
-\item \code{topo_residual_sd}, \code{topo_entropy}
+A named list containing:
+\describe{
+\item{n_trees}{Total number of detected trees.}
+\item{trees_per_acre}{Number of detected trees per 0.222395 ha (≈0.55 acres).}
+\item{n_low, n_low_mid, n_mid, n_mid_upper, n_upper}{Counts of trees in fixed height strata: 0.3–6.1 m, 6.1–12.1 m, 12.1–24.1 m, 24.1–36.1 m, >36.1 m.}
+\item{n_0_6_1, n_0_12_1, n_0_24_1, n_0_36_1, n_0_Inf}{Cumulative counts of trees taller than 0.3 m up to given height thresholds.}
+\item{n_gt_6_1, n_gt_12_1, n_gt_24_1, n_gt_36_1}{Counts of trees taller than each specified threshold.}
+\item{topo_residual_sd}{Standard deviation of residuals from a 2D spline surface fit to tree heights (spatial topographic variation).}
+\item{topo_entropy}{Shannon entropy of the residual distribution (complexity of vertical deviation).}
+\item{smoothness_score}{Composite structural score combining scaled \code{topo_residual_sd} and \code{topo_entropy}.}
 }
 }
 \description{
-Detects individual trees using a variable window local maxima filter
-and classifies trees into vertical strata. Also fits a spline surface
-to derive topographic residual SD and entropy.
+Applies a local maxima filter with an adaptive window function to detect trees,
+classifies them into vertical strata, and calculates both vertical structural
+complexity and spatial smoothness metrics. Designed to be used within
+\code{lidR::pixel_metrics()} for tile-based LAScatalog processing.
+}
+\seealso{
+\code{\link[lidR]{lmf}}, \code{\link[lidR]{locate_trees}}, \code{\link{named_zero_metrics}}
 }

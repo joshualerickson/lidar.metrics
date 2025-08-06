@@ -92,13 +92,20 @@ las_decimate_by_scan_and_density <- function(las, voxel_res = 3,
 
   # Join voxel point counts back to points
   las_coords <- as.data.frame(las@data[, c("X", "Y", "Z")])
-  voxel_ids <- paste(round(las_coords$X / voxel_res),
-                     round(las_coords$Y / voxel_res),
-                     round(las_coords$Z / voxel_res), sep = "_")
+  voxel_ids <- paste(
+    floor(las_coords$X / voxel_res),
+    floor(las_coords$Y / voxel_res),
+    floor(las_coords$Z / voxel_res),
+    sep = "_"
+  )
 
-  voxel_density_df$id <- paste(round(voxel_density_df$X / voxel_res),
-                               round(voxel_density_df$Y / voxel_res),
-                               round(voxel_density_df$Z / voxel_res), sep = "_")
+  voxel_density_df$id <- paste(
+    floor(voxel_density_df$X / voxel_res),
+    floor(voxel_density_df$Y / voxel_res),
+    floor(voxel_density_df$Z / voxel_res),
+    sep = "_"
+  )
+
 
   match_idx <- match(voxel_ids, voxel_density_df$id)
   las@data$local_density <- voxel_density_df$Z[match_idx]

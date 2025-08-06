@@ -19,11 +19,11 @@ named_zero_metrics <- function(type = 'graph') {
     ))
   } else if (type == 'canopy') {
     return(list(
-      fractional_canopy_cover = NA_real_,
-      LAI = NA_real_,
-      LAD_max = NA_real_,
-      LAD_mean = NA_real_,
-      LAD_z_max = NA_real_
+      fractional_canopy_cover = 0,
+      LAI = 0,
+      LAD_max = 0,
+      LAD_mean = 0,
+      LAD_z_max = 0
     ))
   } else if (type == 'trees') {
     return(list(
@@ -37,6 +37,12 @@ named_zero_metrics <- function(type = 'graph') {
       n_gt_6_1 = 0,
       n_gt_12_1 = 0,
       n_gt_24_1 = 0,
+      mean_canopy_area = 0,
+      median_canopy_area = 0,
+      min_canopy_area = 0,
+      max_canopy_area = 0,
+      sd_canopy_area = 0,
+      cv_canopy_area = 0,
       topo_residual_sd = NA_real_,
       topo_entropy = NA_real_,
       smoothness_score = NA_real_

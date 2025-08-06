@@ -27,26 +27,44 @@
 #'
 #' @seealso \code{\link[lidR]{lmf}}, \code{\link[lidR]{locate_trees}}, \code{\link{named_zero_metrics}}
 #' @export
-tree_detection <- function(x, y, z,
+tree_detection <- function(x, y, z, return_number,
                            window_func = function(x) {ifelse(x*0.25 < 1, 1, x*0.25)}) {
   load_graph_deps()
 
-  tryCatch({
+   tryCatch({
     if (length(x) < 5 || length(z) < 5) {
       return(named_zero_metrics('trees'))
     }
 
-    las_data <- suppressMessages(LAS(data.frame(X = x, Y = y, Z = z)))
+    las_data <- suppressMessages(LAS(data.frame(X = x, Y = y, Z = z, ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)))))
 
     trees <- tryCatch({
       lidR::locate_trees(las_data, lidR::lmf(ws = window_func))
     }, error = function(e) {
-      return(named_zero_metrics('trees'))
+      return(NULL)
     })
 
     if (is.null(trees) || nrow(trees) == 0) {
       return(named_zero_metrics('trees'))
     }
+
+    # CHM
+    chm <- tryCatch({
+      lidR::rasterize_canopy(las_data, res = 1, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
+    }, error = function(e) NULL)
+
+
+    if (is.null(chm)) return(named_zero_metrics("trees"))
+
+    # Segmentation
+    algo1 <- tryCatch({ lidR::dalponte2016(chm, trees) }, error = function(e) NULL)
+    if (is.null(algo1)) return(named_zero_metrics("trees"))
+
+    cc <- tryCatch({ lidR::segment_trees(las_data, algo1) }, error = function(e) NULL)
+    if (is.null(cc)) return(named_zero_metrics("trees"))
+
+    metrics <- tryCatch({lidR::crown_metrics(cc, lidR::.stdtreemetrics, geom = "convex")
+    }, error = function(e) data.frame(convhull_area = NA_real_))
 
     coords <- sf::st_coordinates(trees)
     z_vals <- trees$Z
@@ -55,6 +73,7 @@ tree_detection <- function(x, y, z,
     n_gt_6_1    <- as.numeric(sum(z_vals >= 6.1))
     n_gt_12_1   <- as.numeric(sum(z_vals >= 12.1))
     n_gt_24_1   <- as.numeric(sum(z_vals >= 24.1))
+
 
     # Stratified bins (non-cumulative)
     zbin <- cut(z_vals,
@@ -74,23 +93,36 @@ tree_detection <- function(x, y, z,
 
     if (nrow(df) >= 5) {
       tryCatch({
+        pca <- prcomp(df, center = TRUE, scale. = FALSE)
+        pca_complexity <- sum((pca$sdev^2 / sum(pca$sdev^2))[2:3])
+
+        # Spline model of Z ~ x + y
         fit <- lm(z ~ splines::bs(x, df = 4) + splines::bs(y, df = 4), data = df)
         residuals <- df$z - predict(fit, newdata = df)
+
+        # Residual SD
         residual_sd <- sd(residuals)
 
+        # Residual entropy
         h <- hist(residuals, breaks = 10, plot = FALSE)
         p <- h$counts / sum(h$counts)
         topo_entropy <- -sum(p * log(p + 1e-10))
 
-        # Composite smoothness score: scaled SD and entropy
-        scale_0_1_scalar <- function(x, min_val, max_val) {
-          x_scaled <- (x - min_val) / (max_val - min_val)
-          return(max(0, min(1, x_scaled)))  # constrain to [0, 1]
-        }
+        # Residual kurtosis
+        if (!requireNamespace("e1071", quietly = TRUE)) stop("e1071 is required for kurtosis")
+        residual_kurtosis <- e1071::kurtosis(residuals)
 
-        sd_scaled      <- scale_0_1_scalar(residual_sd, 0, 20)
-        entropy_scaled <- scale_0_1_scalar(topo_entropy, 0, 3)
-        smoothness_score <- 0.5 * sd_scaled + 0.5 * entropy_scaled
+        # Normalize and compute final score
+        scale_0_1 <- function(x, min_val, max_val) max(0, min(1, (x - min_val) / (max_val - min_val)))
+
+        scaled_scores <- c(
+          scale_0_1(residual_sd, 0, 20),
+          scale_0_1(topo_entropy, 0, 3),
+          scale_0_1(pca_complexity, 0, 0.5),
+          scale_0_1(residual_kurtosis, 0, 10)
+        )
+
+        smoothness_score <- mean(scaled_scores)
       }, error = function(e) {
         residual_sd <- NA_real_
         topo_entropy <- NA_real_
@@ -98,12 +130,15 @@ tree_detection <- function(x, y, z,
       })
     }
 
-    n_trees <- as.numeric(nrow(trees))
-    trees_per_acre <- as.numeric(n_trees / 0.222395)
+    n_trees <- nrow(trees)
+    trees_per_acre <- n_trees / 0.222395
+    mean_canopy_area_val <- tryCatch(mean(metrics$convhull_area, na.rm = TRUE), error = function(e) as.numeric(0))
+    sd_canopy_area_val   <- tryCatch(sd(metrics$convhull_area, na.rm = TRUE), error = function(e) as.numeric(0))
+    cv_canopy_area_val   <- tryCatch(sd_canopy_area_val / mean_canopy_area_val, error = function(e) as.numeric(0))
 
     return(list(
-      n_trees = n_trees,
-      trees_per_acre = trees_per_acre,
+      n_trees = as.numeric(n_trees),
+      trees_per_acre = as.numeric(trees_per_acre),
       n_strata_low = strata_counts["low"],
       n_strata_low_mid = strata_counts["low_mid"],
       n_strata_mid = strata_counts["mid"],
@@ -112,6 +147,12 @@ tree_detection <- function(x, y, z,
       n_gt_6_1 = n_gt_6_1,
       n_gt_12_1 = n_gt_12_1,
       n_gt_24_1 = n_gt_24_1,
+      mean_canopy_area = mean_canopy_area_val,
+      median_canopy_area = tryCatch(median(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
+      min_canopy_area = tryCatch(min(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
+      max_canopy_area = tryCatch(max(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
+      sd_canopy_area = sd_canopy_area_val,
+      cv_canopy_area = cv_canopy_area_val,
       topo_residual_sd = residual_sd,
       topo_entropy = topo_entropy,
       smoothness_score = smoothness_score
@@ -119,5 +160,6 @@ tree_detection <- function(x, y, z,
   }, error = function(e) {
     return(named_zero_metrics('trees'))
   })
+
 }
 

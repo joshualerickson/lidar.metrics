@@ -14,9 +14,7 @@
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number, scan_angle,
-                                 voxel_res = 3,
-                                 angle_scale, density_scale) {
+canopy_cover_metrics <- function(x, y, z, return_number) {
   # Safety check for low point count
   if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
 
@@ -25,31 +23,26 @@ canopy_cover_metrics <- function(x, y, z, return_number, scan_angle,
     X = x,
     Y = y,
     Z = z,
-    ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)),
-    ScanAngle = scan_angle
+    ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number))
   )))
 
   if (is.empty(las_all)) return(named_zero_metrics(type = 'canopy'))
 
-  # Decimate
-  las_all <- las_decimate_by_scan_and_density(
-    las_all,
-    voxel_res = voxel_res,
-    angle_scale = angle_scale,
-    density_scale = density_scale
-  )
+  las_all <- lidR::filter_poi(las_all, ReturnNumber == 1)
 
-  # Check after decimation
-  if (is.empty(las_all)) return(named_zero_metrics(type = 'canopy'))
-
-  # Canopy cover
-  first_above <- lidR::filter_poi(las_all, Z > 2 & ReturnNumber == 1)
-  total_first <- lidR::filter_poi(las_all, ReturnNumber == 1)
+  chm <- tryCatch({
+    lidR::rasterize_canopy(las_all, res = 0.5, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
+  }, error = function(e) NULL)
 
   canopy_cover <- tryCatch({
-    if (length(total_first@data$Z) == 0) NA_real_
-    else length(first_above@data$Z) / length(total_first@data$Z)
+    vals <- values(chm)
+    if (length(vals) == 0 || all(is.na(vals))) {
+      NA_real_
+    } else {
+      sum(vals > 2, na.rm = TRUE) / sum(!is.na(vals))  # proportion of canopy pixels
+    }
   }, error = function(e) NA_real_)
+
 
   # LAD
   lad <- tryCatch(

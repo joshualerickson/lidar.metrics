@@ -22,30 +22,14 @@
 connectivity_metrics_binned <- function(x, y, z,
                                         edge_thresh_values = c(3, 3),
                                         z_1 = 1,
-                                        z_20 = 3,
-                                        z_40 = 9,
+                                        z_20 = 6,
+                                        z_40 = 12,
                                         voxel_res = 3,
-                                        scan_angle,
-                                        angle_scale,
-                                        density_scale) {
-
-  metric_names <- c(
-    "mean_degree",
-    "mean_betweenness",
-    "mean_closeness",
-    "n_components",
-    "avg_path_length",
-    "eigen_ratio",
-    "graph_density"
-  )
+                                        scan_angle) {
 
   bins <- list(
-    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_",
-         angle_scale = angle_scale[1],
-         density_scale = density_scale[1]),
-    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "midstory_",
-         angle_scale = angle_scale[2],
-         density_scale = density_scale[2])
+    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_"),
+    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "midstory_")
   )
 
 
@@ -61,9 +45,7 @@ connectivity_metrics_binned <- function(x, y, z,
         z_min = b$zmin,
         z_max = b$zmax,
         edge_thresh = b$edge_thresh,
-        voxel_res = b$voxel_res,
-        angle_scale = b$angle_scale,
-        density_scale = b$density_scale
+        voxel_res = b$voxel_res
       )
       setNames(out, paste0(b$prefix, names(out)))
     }, error = function(cond) {
@@ -87,22 +69,17 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @param z_max Maximum Z height to include in bin.
 #' @param edge_thresh Distance threshold (in meters) for connecting centroids.
 #' @param voxel_res Numeric voxel resolution for binning.
-#' @param angle_scale Scaling factor for decimating based on scan angle.
-#' @param density_scale Scaling factor for decimating based on point density.
 #'
 #' @return A named list of graph metrics.
 #' @export
 
-compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, angle_scale, density_scale) {
+compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   load_graph_deps()
 
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
 
-  las_filtered <- las_decimate_by_scan_and_density(las_filtered,
-                                                   voxel_res = voxel_res,
-                                                   angle_scale = angle_scale,
-                                                   density_scale = density_scale)
+  las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::random_per_voxel(res = 6, n = 10))
 
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())
@@ -181,7 +158,9 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, ang
     }, error = function(e) NA_real_),
 
 
-    graph_density = tryCatch(igraph::edge_density(g), error = function(e) 0)
+    graph_density = tryCatch(igraph::edge_density(g), error = function(e) 0),
+    n_m2 = length(las_filtered@data$Z)/(30*30),
+    mean_abs_sa = abs(mean(las_filtered@data$ScanAngle, na.rm = T))
   )
 
   return(results)

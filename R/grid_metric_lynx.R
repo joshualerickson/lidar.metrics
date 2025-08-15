@@ -25,7 +25,8 @@ connectivity_metrics_binned <- function(x, y, z,
                                         z_20 = 6,
                                         z_40 = 12,
                                         voxel_res = 3,
-                                        scan_angle) {
+                                        scan_angle,
+                                        psid) {
 
   bins <- list(
     list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_"),
@@ -36,7 +37,8 @@ connectivity_metrics_binned <- function(x, y, z,
   las_all <- suppressMessages(lidR::LAS(data.frame(X = x,
                                                    Y = y,
                                                    Z = z,
-                                                   ScanAngle = scan_angle)))
+                                                   ScanAngle = scan_angle,
+                                                   PointSourceID = psid)))
 
   results <- purrr::map(bins, function(b) {
     tryCatch({
@@ -79,13 +81,19 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
 
-  las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::random_per_voxel(res = 6, n = 10))
+  psid_vec <- las_filtered@data$PointSourceID
+
+  mean_abs_sa <- abs(mean(las_filtered@data$ScanAngle, na.rm = T))
+
+  swath_n <- length(unique(psid_vec))
+  tab     <- table(psid_vec)
+  dom_id  <- as.integer(names(tab)[which.max(tab)])
+
+  las_filtered <- lidR::filter_poi(las_filtered, PointSourceID == dom_id)
 
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())
   }
-
-
 
   voxel_df <- lidR::voxel_metrics(
     las_filtered,
@@ -110,7 +118,9 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   nn <- dbscan::frNN(coords, eps = edge_thresh)
 
+
   vol <- voxel_df$convex_hull_vol[idx]
+
 
   edges <- dplyr::tibble(
     from = rep(seq_along(nn$id), lengths(nn$id)),
@@ -160,7 +170,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
     graph_density = tryCatch(igraph::edge_density(g), error = function(e) 0),
     n_m2 = length(las_filtered@data$Z)/(30*30),
-    mean_abs_sa = abs(mean(las_filtered@data$ScanAngle, na.rm = T))
+    mean_abs_sa = mean_abs_sa
   )
 
   return(results)

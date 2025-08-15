@@ -22,6 +22,8 @@ named_zero_metrics <- function(type = 'graph') {
   } else if (type == 'canopy') {
     return(list(
       fractional_canopy_cover = 0,
+      rumple_index = 0,
+      vertical_complexity_index = 0,
       LAI = 0,
       LAD_max = 0,
       LAD_mean = 0,

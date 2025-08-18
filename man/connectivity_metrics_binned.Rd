@@ -10,12 +10,12 @@ connectivity_metrics_binned(
   z,
   edge_thresh_values = c(3, 3),
   z_1 = 1,
-  z_20 = 3,
-  z_40 = 9,
+  z_20 = 6,
+  z_40 = 12,
   voxel_res = 3,
   scan_angle,
-  angle_scale,
-  density_scale
+  psid,
+  QL1 = FALSE
 )
 }
 \arguments{
@@ -35,11 +35,11 @@ connectivity_metrics_binned(
 
 \item{voxel_res}{Numeric, voxel resolution in XY plane (default: 3).}
 
-\item{scan_angle}{Numeric vector of scan angles from the LAS file.}
+\item{scan_angle}{Numeric vector of ScanAngle from the LAS file.}
 
-\item{angle_scale}{Scaling factor to adjust decimation based on scan angle.}
+\item{psid}{Numeric vector of PointSourceID from the LAS file.}
 
-\item{density_scale}{Scaling factor to adjust decimation based on local point density.}
+\item{QL1}{logical for whether to QL1 methods or not. Default (FALSE)}
 }
 \value{
 A named list of graph-theoretic metrics for each bin (understory, midstory).

@@ -7,6 +7,7 @@
 #' @param y Numeric vector of Y coordinates.
 #' @param z Numeric vector of Z (height) values.
 #' @param return_number Integer vector of return numbers (e.g., from LAS file).
+#' @param zmax Numeric vector for VIC.
 #'
 #' @return A named list with metrics including:
 #' \itemize{
@@ -14,7 +15,7 @@
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number) {
+canopy_cover_metrics <- function(x, y, z, return_number, zmax) {
   # Safety check for low point count
   if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
 
@@ -30,8 +31,10 @@ canopy_cover_metrics <- function(x, y, z, return_number) {
 
   las_all <- lidR::filter_poi(las_all, ReturnNumber == 1)
 
+
+
   chm <- tryCatch({
-    lidR::rasterize_canopy(las_all, res = 0.5, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
+    lidR::rasterize_canopy(las_all, res = 1, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
   }, error = function(e) NULL)
 
   canopy_cover <- tryCatch({
@@ -41,6 +44,20 @@ canopy_cover_metrics <- function(x, y, z, return_number) {
     } else {
       sum(vals > 2, na.rm = TRUE) / sum(!is.na(vals))  # proportion of canopy pixels
     }
+  }, error = function(e) NA_real_)
+
+  rumple <- tryCatch({
+    vals <- values(chm)
+    if (length(vals) == 0 || all(is.na(vals))) {
+      NA_real_
+    } else {
+      rumple_index(chm)  # proportion of canopy pixels
+    }
+  }, error = function(e) NA_real_)
+
+  vci <- tryCatch({
+      VCI(na.omit(las_all@data$Z), by = 1, zmax = zmax)  # proportion of canopy pixels
+
   }, error = function(e) NA_real_)
 
 
@@ -53,7 +70,9 @@ canopy_cover_metrics <- function(x, y, z, return_number) {
   # Final output as valid named list
   out <- c(
     lad,
-    list(fractional_canopy_cover = canopy_cover)
+    list(fractional_canopy_cover = canopy_cover,
+         rumple_index = rumple,
+         vertical_complexity_index = vci)
   )
 
   return(out)

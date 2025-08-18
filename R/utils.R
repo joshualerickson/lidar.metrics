@@ -10,6 +10,7 @@ named_zero_metrics <- function(type = 'graph') {
   if (type == 'graph') {
     return(list(
       mean_degree = 0,
+      mean_strength = 0,
       mean_betweenness = 0,
       mean_closeness = NA_real_,
       n_components = NA_real_,
@@ -22,6 +23,8 @@ named_zero_metrics <- function(type = 'graph') {
   } else if (type == 'canopy') {
     return(list(
       fractional_canopy_cover = 0,
+      rumple_index = 0,
+      vertical_complexity_index = 0,
       LAI = 0,
       LAD_max = 0,
       LAD_mean = 0,
@@ -69,86 +72,6 @@ load_graph_deps <- function() {
   invisible(TRUE)
 }
 
-
-#' Decimate LiDAR Point Cloud by Scan Angle and Local Density
-#'
-#' Applies spatial decimation to a LAS object based on both scan angle and
-#' local voxel point density, reducing sampling artifacts.
-#'
-#' @param las A LAS object from the `lidR` package.
-#' @param voxel_res Resolution of voxel used for density estimation (default = 3).
-#' @param angle_scale Scaling factor for decimating by scan angle.
-#' @param density_scale Scaling factor for decimating by local density.
-#'
-#' @return A decimated LAS object.
-#' @export
-
-las_decimate_by_scan_and_density <- function(las, voxel_res = 3,
-                                             angle_scale = 1/15,
-                                             density_scale = 1/10) {
-  if (is.empty(las)) return(las)
-
-  # Get voxel-based point count (local density proxy)
-  voxel_density <- lidR::voxel_metrics(las, ~length(Z), res = voxel_res)
-  voxel_density_df <- as.data.frame(voxel_density)
-
-  # Join voxel point counts back to points
-  las_coords <- as.data.frame(las@data[, c("X", "Y", "Z")])
-  voxel_ids <- paste(
-    floor(las_coords$X / voxel_res),
-    floor(las_coords$Y / voxel_res),
-    floor(las_coords$Z / voxel_res),
-    sep = "_"
-  )
-
-  voxel_density_df$id <- paste(
-    floor(voxel_density_df$X / voxel_res),
-    floor(voxel_density_df$Y / voxel_res),
-    floor(voxel_density_df$Z / voxel_res),
-    sep = "_"
-  )
-
-
-  match_idx <- match(voxel_ids, voxel_density_df$id)
-  las@data$local_density <- voxel_density_df$Z[match_idx]
-
-  # Now compute decimation weights
-  las@data$decim_wt <- compute_decimation_weights(
-    scan_angle = las@data$ScanAngle,
-    local_density = las@data$local_density,
-    angle_scale = angle_scale,
-    density_scale = density_scale
-  )
-
-  # Sample points with inverse probability
-  keep <- runif(nrow(las@data)) > las@data$decim_wt
-  return(filter_poi(las, keep))
-}
-
-
-#' Compute Weights for LiDAR Point Decimation
-#'
-#' Computes decimation weights based on scan angle and local point density,
-#' which are used to reduce LiDAR sampling bias.
-#'
-#' @param scan_angle Vector of scan angle values.
-#' @param local_density Estimated local point density per voxel.
-#' @param angle_scale Scaling factor for scan angle term (default = 1/15).
-#' @param density_scale Scaling factor for density term (default = 1/10).
-#'
-#' @return A numeric vector of decimation weights between 0 and 1.
-#' @export
-
-compute_decimation_weights <- function(scan_angle, local_density,
-                                       angle_scale = 1/15,
-                                       density_scale = 1/10) {
-  # Normalize both and take geometric mean
-  angle_term <- pmin(1, abs(scan_angle) * angle_scale)
-  density_term <- pmin(1, local_density * density_scale)
-
-  decimation_weight <- (angle_term + density_term) / 2
-  return(decimation_weight)
-}
 
 #' Compute Voxel-Level Structure Metrics
 #'

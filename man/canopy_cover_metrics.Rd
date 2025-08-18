@@ -4,7 +4,7 @@
 \alias{canopy_cover_metrics}
 \title{Compute Canopy Cover}
 \usage{
-canopy_cover_metrics(x, y, z, return_number)
+canopy_cover_metrics(x, y, z, return_number, zmax)
 }
 \arguments{
 \item{x}{Numeric vector of X coordinates.}
@@ -14,6 +14,8 @@ canopy_cover_metrics(x, y, z, return_number)
 \item{z}{Numeric vector of Z (height) values.}
 
 \item{return_number}{Integer vector of return numbers (e.g., from LAS file).}
+
+\item{zmax}{Numeric vector for VIC.}
 }
 \value{
 A named list with metrics including:

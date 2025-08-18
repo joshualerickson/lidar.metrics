@@ -12,9 +12,9 @@
 #' @param z_20 Midstory lower bound (default: 3 m).
 #' @param z_40 Midstory upper bound (default: 9 m).
 #' @param voxel_res Numeric, voxel resolution in XY plane (default: 3).
-#' @param scan_angle Numeric vector of scan angles from the LAS file.
-#' @param angle_scale Scaling factor to adjust decimation based on scan angle.
-#' @param density_scale Scaling factor to adjust decimation based on local point density.
+#' @param scan_angle Numeric vector of ScanAngle from the LAS file.
+#' @param psid Numeric vector of PointSourceID from the LAS file.
+#' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
 #'
 #' @return A named list of graph-theoretic metrics for each bin (understory, midstory).
 #' @export
@@ -26,11 +26,12 @@ connectivity_metrics_binned <- function(x, y, z,
                                         z_40 = 12,
                                         voxel_res = 3,
                                         scan_angle,
-                                        psid) {
+                                        psid,
+                                        QL1 = FALSE) {
 
   bins <- list(
-    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_"),
-    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "midstory_")
+    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_", QL1 = QL1),
+    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "midstory_", QL1 = QL1)
   )
 
 
@@ -47,7 +48,8 @@ connectivity_metrics_binned <- function(x, y, z,
         z_min = b$zmin,
         z_max = b$zmax,
         edge_thresh = b$edge_thresh,
-        voxel_res = b$voxel_res
+        voxel_res = b$voxel_res,
+        b$QL1
       )
       setNames(out, paste0(b$prefix, names(out)))
     }, error = function(cond) {
@@ -71,25 +73,33 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @param z_max Maximum Z height to include in bin.
 #' @param edge_thresh Distance threshold (in meters) for connecting centroids.
 #' @param voxel_res Numeric voxel resolution for binning.
+#' @param QL1 logical for whether to QL1 methods or not.
 #'
 #' @return A named list of graph metrics.
 #' @export
 
-compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
+compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1) {
 
   load_graph_deps()
 
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
 
+  if(QL1) {
+    ran_thresh <- runif(1, 5, 10)
+    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::homogenize(ran_thresh, res = 30))
+
+  } else {
+
   psid_vec <- las_filtered@data$PointSourceID
+
+  keep_ids <- as.integer(names(which.max(table(psid_vec))))
+
+  las_filtered <- lidR::filter_poi(las_filtered, PointSourceID %in% keep_ids)
+
+  }
 
   mean_abs_sa <- abs(mean(las_filtered@data$ScanAngle, na.rm = T))
 
-  swath_n <- length(unique(psid_vec))
-  tab     <- table(psid_vec)
-  dom_id  <- as.integer(names(tab)[which.max(tab)])
-
-  las_filtered <- lidR::filter_poi(las_filtered, PointSourceID == dom_id)
 
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {
     return(named_zero_metrics())
@@ -100,6 +110,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
     func = ~lidar.metrics::voxel_structure_metrics(Z, X, Y),
     res = voxel_res
   )
+
 
   voxel_df <- as.data.frame(voxel_df)
 
@@ -121,7 +132,6 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   vol <- voxel_df$convex_hull_vol[idx]
 
-
   edges <- dplyr::tibble(
     from = rep(seq_along(nn$id), lengths(nn$id)),
     to = unlist(nn$id)
@@ -137,7 +147,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res) {
 
   results <- list(
     mean_degree = mean(igraph::degree(g), na.rm = TRUE),
-
+    mean_strength = mean(igraph::strength(g, weights = E(g)$inv_weight), na.rm = TRUE),
     mean_betweenness = tryCatch({
       mean(igraph::betweenness(g, weights = E(g)$inv_weight, normalized = FALSE), na.rm = TRUE)
     }, error = function(e) 0),

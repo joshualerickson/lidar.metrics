@@ -4,16 +4,18 @@ library(terra)
 library(dplyr)
 library(sf)
 library(lidar.metrics)
+remotes::install_github('joshualerickson/lidar.metrics')
  plan(multisession, workers=15)
- set_lidr_threads(2)
+ set_lidr_threads(1)
 
 ctg_norm_clip<- readLAScatalog("/home/josh.erickson/Documents/projects/vbflood/dev/flathead_testing/")
 ctg_norm_clip<- readLAScatalog("/mnt/boreas/lidar_download/LincolnCounty/lincoln_normalized_meters/")
 ctg_norm_clip<- readLAScatalog("/mnt/DataDrive1/data/LIDAR/MT_P3_3_B21/normalized/")
 plot(ctg_norm_clip)
+ctg_norm_clip
 plot(ctg_norm_clip@data$geometry)
-mapview::mapview(ctg_norm_clip@data$geometry)
-bb <- mapedit::drawFeatures() %>% st_transform(st_crs(ctg_norm_clip))
+m <- mapview::mapview(ctg_norm_clip@data)@map
+bb <- mapedit::drawFeatures(map = ) %>% st_transform(st_crs(ctg_norm_clip))
 
 ctg_norm_clip2 <- lidR::catalog_intersect(ctg_norm_clip, bb)
 plot(ctg_norm_clip2)
@@ -24,7 +26,7 @@ opt_chunk_buffer(ctg_norm_clip2) <- 30
 opt_chunk_alignment(ctg_norm_clip2) <- c(0, 0)
 opt_stop_early(ctg_norm_clip2) <- FALSE
 
-opt_filter(ctg_norm_clip) <- paste(
+opt_filter(ctg_norm_clip2) <- paste(
   "-drop_class 7 9",            # drop noise and water
   "-drop_withheld",            # drop withheld (often invalid points)
   "-drop_overlap",
@@ -49,14 +51,16 @@ testing_density <- pixel_metrics(ctg_norm_clip2,~list(density = length(Z)/(30*30
 
 plot(ctg_norm_clip2[c(70:73,82:86),])
 
-testing_graph_chv_lc<- pixel_metrics(ctg_norm_clip2[c(70:73,82:86),],~connectivity_metrics_binned(X, Y, Z,
+testing_graph_chv_lc<- pixel_metrics(ctg_norm_clip2,~lidar.metrics::connectivity_metrics_binned(X, Y, Z,
                                                                               scan_angle = ScanAngle,
-                                                                              psid = PointSourceID, QL1 = TRUE),
+                                                                              psid = PointSourceID,
+
+                                                                              QL1 = TRUE),
                                  res=30)
 
-testing_graph_chv_fc <- pixel_metrics(ctg_norm_clip,~connectivity_metrics_binned(X, Y, Z,
-                                                                              scan_angle = ScanAngle,
-                                                                              psid = PointSourceID, QL1 = FALSE),
+testing_graph_chv_lc <- pixel_metrics(ctg_norm_clip2,~connectivity_metrics_binned(X, Y, Z, return_number = ReturnNumber,
+                                                                              scan_angle = ScanAngle, density = 4,
+                                                                              psid = PointSourceID, QL1 = TRUE),
                                  res=30)
 
 testing_graph_chv_lc<- pixel_metrics(ctg_norm_clip2[10:30,],~list(psid_n = length(unique(PointSourceID)),
@@ -65,11 +69,13 @@ testing_graph_chv_lc<- pixel_metrics(ctg_norm_clip2[10:30,],~list(psid_n = lengt
                                                          n = length(Z),
                                                          psid_n = max(table(PointSourceID))),
                                  res=30)
-mapview::mapview(testing_graph_chv_lc[[1]])
+
+mapview::mapview(testing_graph_chv_lc[[9]])
 plot(testing_graph_chv_lc[[4:5]])
-plot(testing_graph_chv_fc[[c(2:3, 9)]])
-plot(testing_graph_chv_fc[[c(1:10)]])
-plot(testing_graph_chv_lc[[c(1)]])
+plot(testing_graph_chv_lc[[c(2:3, 9)]])
+plot(testing_graph_chv_lc[[c(19, 9)]])
+plot(testing_graph_chv_lc[[c(1:10)]])
+plot(testing_graph_chv_lc[[c(11:20)]])
 plot(testing_graph_chv_lc[[c(9)]])
 plot(testing_graph_chv_fc[[3]]< 0.6)
 plot(testing_graph_chv_lc[[c(3,7, 9:10)]])

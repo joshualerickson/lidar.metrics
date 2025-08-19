@@ -14,7 +14,10 @@
 #' @param voxel_res Numeric, voxel resolution in XY plane (default: 3).
 #' @param scan_angle Numeric vector of ScanAngle from the LAS file.
 #' @param psid Numeric vector of PointSourceID from the LAS file.
+#' @param return_number Numeric vector of ReturnNumber from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
+#' @param density Numeric to pass to `lidR::homogenize()` density argument.
+#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
 #'
 #' @return A named list of graph-theoretic metrics for each bin (understory, midstory).
 #' @export
@@ -27,11 +30,16 @@ connectivity_metrics_binned <- function(x, y, z,
                                         voxel_res = 3,
                                         scan_angle,
                                         psid,
-                                        QL1 = FALSE) {
+                                        return_number,
+                                        QL1 = FALSE,
+                                        density = 12,
+                                        dec_res = 30) {
 
   bins <- list(
-    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1], voxel_res = voxel_res, prefix = "understory_", QL1 = QL1),
-    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2], voxel_res = voxel_res, prefix = "midstory_", QL1 = QL1)
+    list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1],
+         voxel_res = voxel_res, prefix = "understory_", QL1 = QL1, density = density, dec_res = dec_res),
+    list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2],
+         voxel_res = voxel_res, prefix = "midstory_", QL1 = QL1, density = density, dec_res = dec_res)
   )
 
 
@@ -39,7 +47,8 @@ connectivity_metrics_binned <- function(x, y, z,
                                                    Y = y,
                                                    Z = z,
                                                    ScanAngle = scan_angle,
-                                                   PointSourceID = psid)))
+                                                   PointSourceID = psid,
+                                                   ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)))))
 
   results <- purrr::map(bins, function(b) {
     tryCatch({
@@ -49,7 +58,9 @@ connectivity_metrics_binned <- function(x, y, z,
         z_max = b$zmax,
         edge_thresh = b$edge_thresh,
         voxel_res = b$voxel_res,
-        b$QL1
+        b$QL1,
+        b$density,
+        b$dec_res
       )
       setNames(out, paste0(b$prefix, names(out)))
     }, error = function(cond) {
@@ -74,19 +85,27 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @param edge_thresh Distance threshold (in meters) for connecting centroids.
 #' @param voxel_res Numeric voxel resolution for binning.
 #' @param QL1 logical for whether to QL1 methods or not.
+#' @param density Numeric to pass to `lidR::homogenize()` density argument.
+#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
 #'
 #' @return A named list of graph metrics.
 #' @export
 
-compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1) {
+compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1, density, dec_res) {
 
   load_graph_deps()
 
   las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
 
   if(QL1) {
-    ran_thresh <- runif(1, 5, 10)
-    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::homogenize(ran_thresh, res = 30))
+
+    las_filtered <- lidR::filter_poi(las_filtered, ReturnNumber == 1)
+
+    set.seed(1234)
+
+    density_jitter <- density + runif(1, -0.25, 0.25)
+
+    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::homogenize(density = density, res = dec_res))
 
   } else {
 

@@ -4,7 +4,16 @@
 \alias{compute_graph_metrics}
 \title{Compute Graph Metrics for a Voxelized Vertical Bin}
 \usage{
-compute_graph_metrics(las, z_min, z_max, edge_thresh, voxel_res, QL1)
+compute_graph_metrics(
+  las,
+  z_min,
+  z_max,
+  edge_thresh,
+  voxel_res,
+  QL1,
+  density,
+  dec_res
+)
 }
 \arguments{
 \item{las}{A LAS object (LiDAR point cloud) from the \code{lidR} package.}
@@ -18,6 +27,10 @@ compute_graph_metrics(las, z_min, z_max, edge_thresh, voxel_res, QL1)
 \item{voxel_res}{Numeric voxel resolution for binning.}
 
 \item{QL1}{logical for whether to QL1 methods or not.}
+
+\item{density}{Numeric to pass to \code{lidR::homogenize()} density argument.}
+
+\item{dec_res}{Numeric to pass to \code{lidR::homogenize()} res argument.}
 }
 \value{
 A named list of graph metrics.

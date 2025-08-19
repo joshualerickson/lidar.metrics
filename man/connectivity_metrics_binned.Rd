@@ -15,7 +15,10 @@ connectivity_metrics_binned(
   voxel_res = 3,
   scan_angle,
   psid,
-  QL1 = FALSE
+  return_number,
+  QL1 = FALSE,
+  density = 12,
+  dec_res = 30
 )
 }
 \arguments{
@@ -39,7 +42,13 @@ connectivity_metrics_binned(
 
 \item{psid}{Numeric vector of PointSourceID from the LAS file.}
 
+\item{return_number}{Numeric vector of ReturnNumber from the LAS file.}
+
 \item{QL1}{logical for whether to QL1 methods or not. Default (FALSE)}
+
+\item{density}{Numeric to pass to \code{lidR::homogenize()} density argument.}
+
+\item{dec_res}{Numeric to pass to \code{lidR::homogenize()} res argument.}
 }
 \value{
 A named list of graph-theoretic metrics for each bin (understory, midstory).

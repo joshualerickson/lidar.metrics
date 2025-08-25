@@ -24,11 +24,11 @@ named_zero_metrics <- function(type = 'graph') {
     return(list(
       fractional_canopy_cover = 0,
       rumple_index = 0,
-      vertical_complexity_index = 0,
       LAI = 0,
       LAD_max = 0,
       LAD_mean = 0,
-      LAD_z_max = 0
+      LAD_z_max = 0,
+      n_m2 = 0
     ))
   } else if (type == 'trees') {
     return(list(
@@ -42,12 +42,6 @@ named_zero_metrics <- function(type = 'graph') {
       n_gt_6_1 = 0,
       n_gt_12_1 = 0,
       n_gt_24_1 = 0,
-      mean_canopy_area = 0,
-      median_canopy_area = 0,
-      min_canopy_area = 0,
-      max_canopy_area = 0,
-      sd_canopy_area = 0,
-      cv_canopy_area = 0,
       topo_residual_sd = NA_real_,
       topo_entropy = NA_real_,
       smoothness_score = NA_real_
@@ -113,4 +107,3 @@ voxel_structure_metrics <- function(z, x, y) {
     point_count = nrow(coords)
   ))
 }
-

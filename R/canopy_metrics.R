@@ -6,73 +6,106 @@
 #' @param x Numeric vector of X coordinates.
 #' @param y Numeric vector of Y coordinates.
 #' @param z Numeric vector of Z (height) values.
-#' @param return_number Integer vector of return numbers (e.g., from LAS file).
-#' @param zmax Numeric vector for VIC.
+#' @param psid Numeric vector of PointSourceID from the LAS file.
+#' @param return_number Numeric vector of ReturnNumber from the LAS file.
+#' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
+#' @param density Numeric to pass to `lidR::homogenize()` density argument.
+#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
 #'
 #' @return A named list with metrics including:
 #' \itemize{
 #'   \item \code{fractional_canopy_cover}
+#'   \item \code{rumple_index}
 #'   \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 #' }
 #' @export
-canopy_cover_metrics <- function(x, y, z, return_number, zmax) {
+canopy_cover_metrics <- function(x, y, z,
+                                 psid,
+                                 return_number,
+                                 QL1 = FALSE,
+                                 n = 15,
+                                 res = 3) {
   # Safety check for low point count
-  if (length(z) < 5) return(named_zero_metrics(type = 'canopy'))
+  if (length(z) < 5) return(c(named_zero_metrics('trees'), named_zero_metrics('canopy')))
 
   # Create LAS
-  las_all <- suppressMessages(lidR::LAS(data.frame(
+  las <- suppressMessages(lidR::LAS(data.frame(
     X = x,
     Y = y,
     Z = z,
+    PointSourceID = psid,
     ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number))
   )))
 
-  if (is.empty(las_all)) return(named_zero_metrics(type = 'canopy'))
+  if (is.empty(las)) return(c(named_zero_metrics('trees'), named_zero_metrics('canopy')))
 
-  las_all <- lidR::filter_poi(las_all, ReturnNumber == 1)
+  if(QL1) {
+
+    #las_filtered <- lidR::filter_poi(las, ReturnNumber == 1)
+
+    #las_filtered <- lidR::decimate_points(las, algorithm = lidR::random_per_voxel(n = n, res = res))
+    las_filtered <- lidR::decimate_points(las, algorithm = lidR::homogenize(density = n, res = res))
 
 
+  } else {
+
+    psid_vec <- las@data$PointSourceID
+
+    keep_ids <- as.integer(names(which.max(table(psid_vec))))
+
+    las_filtered <- lidR::filter_poi(las, PointSourceID %in% keep_ids)
+
+  }
 
   chm <- tryCatch({
-    lidR::rasterize_canopy(las_all, res = 1, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
-  }, error = function(e) NULL)
-
-  canopy_cover <- tryCatch({
-    vals <- values(chm)
-    if (length(vals) == 0 || all(is.na(vals))) {
-      NA_real_
-    } else {
-      sum(vals > 2, na.rm = TRUE) / sum(!is.na(vals))  # proportion of canopy pixels
-    }
+    lidR::rasterize_canopy(las_filtered, res = 0.5, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
   }, error = function(e) NA_real_)
+
+
+    canopy_cover <- tryCatch({
+    vals <- terra::values(chm)
+
+      if (length(vals) == 0L) NA_real_ else {
+        denom <- sum(!is.na(vals))
+        if (denom == 0L) NA_real_ else {
+          num <- sum(vals > 2, na.rm = TRUE)
+          as.numeric(num / denom)
+        }
+      }
+    }, error = function(e) NA_real_)
+
+    # Replace NaN/Inf defensively
+    if (!is.finite(canopy_cover)) canopy_cover <- NA_real_
 
   rumple <- tryCatch({
-    vals <- values(chm)
-    if (length(vals) == 0 || all(is.na(vals))) {
-      NA_real_
-    } else {
-      rumple_index(chm)  # proportion of canopy pixels
+    vals <- terra::values(chm)
+    if (length(vals) == 0L) NA_real_ else {
+      denom <- sum(!is.na(vals))
+      if (denom == 0L) NA_real_ else {
+       lidR::rumple_index(chm)
+      }
     }
   }, error = function(e) NA_real_)
 
-  vci <- tryCatch({
-      VCI(na.omit(las_all@data$Z), by = 1, zmax = zmax)  # proportion of canopy pixels
 
-  }, error = function(e) NA_real_)
+  if (!is.finite(rumple)) rumple <- NA_real_
 
 
-  # LAD
   lad <- tryCatch(
-    lad_metrics(las_all@data$Z, dz = 1, z0 = 2),
+    lad_metrics(las_filtered@data$Z, dz = 1, z0 = 2),
     error = function(e) named_zero_metrics(type = 'canopy')
   )
+
+  trees <- tryCatch(tree_detection(las_filtered),
+                    error = function(e) named_zero_metrics(type = 'trees'))
 
   # Final output as valid named list
   out <- c(
     lad,
     list(fractional_canopy_cover = canopy_cover,
-         rumple_index = rumple,
-         vertical_complexity_index = vci)
+    rumple_index = rumple),
+    trees,
+    n_m2 = length(las_filtered@data$Z)/900
   )
 
   return(out)

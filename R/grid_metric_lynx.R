@@ -9,8 +9,8 @@
 #' @param z Z (height) values of LiDAR points.
 #' @param edge_thresh_values Numeric vector of edge thresholds (e.g., c(3, 3)) for each vertical bin.
 #' @param z_1 Lower height threshold (default: 1 m).
-#' @param z_20 Midstory lower bound (default: 3 m).
-#' @param z_40 Midstory upper bound (default: 9 m).
+#' @param z_20 Midstory lower bound (default: 6 m).
+#' @param z_40 Midstory upper bound (default: 12 m).
 #' @param voxel_res Numeric, voxel resolution in XY plane (default: 3).
 #' @param scan_angle Numeric vector of ScanAngle from the LAS file.
 #' @param psid Numeric vector of PointSourceID from the LAS file.

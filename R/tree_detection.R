@@ -27,44 +27,27 @@
 #'
 #' @seealso \code{\link[lidR]{lmf}}, \code{\link[lidR]{locate_trees}}, \code{\link{named_zero_metrics}}
 #' @export
-tree_detection <- function(x, y, z, return_number,
+tree_detection <- function(las,
                            window_func = function(x) {ifelse(x*0.25 < 1, 1, x*0.25)}) {
   load_graph_deps()
 
    tryCatch({
-    if (length(x) < 5 || length(z) < 5) {
+    if (is.empty(las)) {
       return(named_zero_metrics('trees'))
     }
 
-    las_data <- suppressMessages(LAS(data.frame(X = x, Y = y, Z = z, ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)))))
-
     trees <- tryCatch({
-      lidR::locate_trees(las_data, lidR::lmf(ws = window_func))
+      lidR::locate_trees(las, lidR::lmf(ws = window_func))
     }, error = function(e) {
       return(NULL)
+
     })
 
     if (is.null(trees) || nrow(trees) == 0) {
       return(named_zero_metrics('trees'))
     }
 
-    # CHM
-    chm <- tryCatch({
-      lidR::rasterize_canopy(las_data, res = 1, algorithm = lidR::pitfree(thresholds = c(0, 10, 20), max_edge =  c(0, 1.5)))
-    }, error = function(e) NULL)
-
-
     if (is.null(chm)) return(named_zero_metrics("trees"))
-
-    # Segmentation
-    algo1 <- tryCatch({ lidR::dalponte2016(chm, trees) }, error = function(e) NULL)
-    if (is.null(algo1)) return(named_zero_metrics("trees"))
-
-    cc <- tryCatch({ lidR::segment_trees(las_data, algo1) }, error = function(e) NULL)
-    if (is.null(cc)) return(named_zero_metrics("trees"))
-
-    metrics <- tryCatch({lidR::crown_metrics(cc, lidR::.stdtreemetrics, geom = "convex")
-    }, error = function(e) data.frame(convhull_area = NA_real_))
 
     coords <- sf::st_coordinates(trees)
     z_vals <- trees$Z
@@ -132,9 +115,6 @@ tree_detection <- function(x, y, z, return_number,
 
     n_trees <- nrow(trees)
     trees_per_acre <- n_trees / 0.222395
-    mean_canopy_area_val <- tryCatch(mean(metrics$convhull_area, na.rm = TRUE), error = function(e) as.numeric(0))
-    sd_canopy_area_val   <- tryCatch(sd(metrics$convhull_area, na.rm = TRUE), error = function(e) as.numeric(0))
-    cv_canopy_area_val   <- tryCatch(sd_canopy_area_val / mean_canopy_area_val, error = function(e) as.numeric(0))
 
     return(list(
       n_trees = as.numeric(n_trees),
@@ -147,12 +127,6 @@ tree_detection <- function(x, y, z, return_number,
       n_gt_6_1 = n_gt_6_1,
       n_gt_12_1 = n_gt_12_1,
       n_gt_24_1 = n_gt_24_1,
-      mean_canopy_area = mean_canopy_area_val,
-      median_canopy_area = tryCatch(median(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
-      min_canopy_area = tryCatch(min(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
-      max_canopy_area = tryCatch(max(metrics$convhull_area, na.rm = T), error = function(e) as.numeric(0)),
-      sd_canopy_area = sd_canopy_area_val,
-      cv_canopy_area = cv_canopy_area_val,
       topo_residual_sd = residual_sd,
       topo_entropy = topo_entropy,
       smoothness_score = smoothness_score

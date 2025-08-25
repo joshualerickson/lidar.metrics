@@ -16,8 +16,8 @@
 #' @param psid Numeric vector of PointSourceID from the LAS file.
 #' @param return_number Numeric vector of ReturnNumber from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
-#' @param density Numeric to pass to `lidR::homogenize()` density argument.
-#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
+#' @param n Numeric to pass to `lidR::random_per_voxel()` density argument.
+#' @param res Numeric to pass to `lidR::random_per_voxel()` res argument.
 #'
 #' @return A named list of graph-theoretic metrics for each bin (understory, midstory).
 #' @export
@@ -32,8 +32,8 @@ connectivity_metrics_binned <- function(x, y, z,
                                         psid,
                                         return_number,
                                         QL1 = FALSE,
-                                        density = 12,
-                                        dec_res = 30) {
+                                        n = 1,
+                                        res = 3) {
 
   bins <- list(
     list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1],
@@ -85,8 +85,8 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @param edge_thresh Distance threshold (in meters) for connecting centroids.
 #' @param voxel_res Numeric voxel resolution for binning.
 #' @param QL1 logical for whether to QL1 methods or not.
-#' @param density Numeric to pass to `lidR::homogenize()` density argument.
-#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
+#' @param n Numeric to pass to `lidR::random_per_voxel()` density argument.
+#' @param res Numeric to pass to `lidR::random_per_voxel()` res argument.
 #'
 #' @return A named list of graph metrics.
 #' @export
@@ -99,13 +99,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1
 
   if(QL1) {
 
-    las_filtered <- lidR::filter_poi(las_filtered, ReturnNumber == 1)
-
-    set.seed(1234)
-
-    density_jitter <- density + runif(1, -0.25, 0.25)
-
-    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::homogenize(density = density, res = dec_res))
+    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::random_per_voxel(n = n, res = res))
 
   } else {
 

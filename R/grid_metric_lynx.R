@@ -9,15 +9,15 @@
 #' @param z Z (height) values of LiDAR points.
 #' @param edge_thresh_values Numeric vector of edge thresholds (e.g., c(3, 3)) for each vertical bin.
 #' @param z_1 Lower height threshold (default: 1 m).
-#' @param z_20 Midstory lower bound (default: 3 m).
-#' @param z_40 Midstory upper bound (default: 9 m).
+#' @param z_20 Midstory lower bound (default: 6 m).
+#' @param z_40 Midstory upper bound (default: 12 m).
 #' @param voxel_res Numeric, voxel resolution in XY plane (default: 3).
 #' @param scan_angle Numeric vector of ScanAngle from the LAS file.
 #' @param psid Numeric vector of PointSourceID from the LAS file.
 #' @param return_number Numeric vector of ReturnNumber from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
-#' @param density Numeric to pass to `lidR::homogenize()` density argument.
-#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
+#' @param n Numeric to pass to `lidR::random_per_voxel()` density argument.
+#' @param res Numeric to pass to `lidR::random_per_voxel()` res argument.
 #'
 #' @return A named list of graph-theoretic metrics for each bin (understory, midstory).
 #' @export
@@ -32,14 +32,14 @@ connectivity_metrics_binned <- function(x, y, z,
                                         psid,
                                         return_number,
                                         QL1 = FALSE,
-                                        density = 12,
-                                        dec_res = 30) {
+                                        n = 1,
+                                        res = 3) {
 
   bins <- list(
     list(zmin = z_1, zmax = z_20, edge_thresh = edge_thresh_values[1],
-         voxel_res = voxel_res, prefix = "understory_", QL1 = QL1, density = density, dec_res = dec_res),
+         voxel_res = voxel_res, prefix = "understory_", QL1 = QL1, n = n, res = res),
     list(zmin = z_20, zmax = z_40, edge_thresh = edge_thresh_values[2],
-         voxel_res = voxel_res, prefix = "midstory_", QL1 = QL1, density = density, dec_res = dec_res)
+         voxel_res = voxel_res, prefix = "midstory_", QL1 = QL1, n = n, res = res)
   )
 
 
@@ -59,8 +59,8 @@ connectivity_metrics_binned <- function(x, y, z,
         edge_thresh = b$edge_thresh,
         voxel_res = b$voxel_res,
         b$QL1,
-        b$density,
-        b$dec_res
+        b$n,
+        b$res
       )
       setNames(out, paste0(b$prefix, names(out)))
     }, error = function(cond) {
@@ -85,29 +85,28 @@ connectivity_metrics_binned <- function(x, y, z,
 #' @param edge_thresh Distance threshold (in meters) for connecting centroids.
 #' @param voxel_res Numeric voxel resolution for binning.
 #' @param QL1 logical for whether to QL1 methods or not.
-#' @param density Numeric to pass to `lidR::homogenize()` density argument.
-#' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
+#' @param n Numeric to pass to `lidR::random_per_voxel()` density argument.
+#' @param res Numeric to pass to `lidR::random_per_voxel()` res argument.
 #'
 #' @return A named list of graph metrics.
 #' @export
 
-compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1, density, dec_res) {
+compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1, n, res) {
 
   load_graph_deps()
 
-  las_filtered <- lidR::filter_poi(las, Z > z_min & Z <= z_max)
+  las_filtered <- lidR::filter_poi(las, Z >= z_min & Z <= z_max)
+
+  mean_abs_sa <- abs(mean(las_filtered@data$ScanAngle, na.rm = T))
 
   if(QL1) {
 
-    las_filtered <- lidR::filter_poi(las_filtered, ReturnNumber == 1)
 
-    set.seed(1234)
+  las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::random_per_voxel(n = n, res = res))
 
-    density_jitter <- density + runif(1, -0.25, 0.25)
-
-    las_filtered <- lidR::decimate_points(las_filtered, algorithm = lidR::homogenize(density = density, res = dec_res))
 
   } else {
+
 
   psid_vec <- las_filtered@data$PointSourceID
 
@@ -115,9 +114,9 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1
 
   las_filtered <- lidR::filter_poi(las_filtered, PointSourceID %in% keep_ids)
 
+
   }
 
-  mean_abs_sa <- abs(mean(las_filtered@data$ScanAngle, na.rm = T))
 
 
   if (is.empty(las_filtered) || length(las_filtered@data$Z) < 2) {

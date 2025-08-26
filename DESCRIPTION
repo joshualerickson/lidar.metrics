@@ -4,6 +4,7 @@ Title: LiDAR-Based Canopy and Connectivity Metrics
 Version: 0.1.0
 Authors@R: 
     person(given = "Joshua", family = "Erickson", email = "joshualerickson@gmail.com", role = c("aut", "cre"))
+    person(given = "Zachary", family = "Holden", email = "zachary.holden@gmail.com", role = c("aut", "cre"))
 Description: Calculates voxel-based graph theory metrics, canopy cover, leaf area density (LAD), and tree detection metrics from LiDAR point cloud data.
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -20,4 +21,5 @@ Imports:
     splines,
     stats,
     sf,
-    geometry
+    geometry,
+    terra

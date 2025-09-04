@@ -59,7 +59,7 @@ named_zero_metrics <- function(type = 'graph') {
 #' @return Invisibly returns `TRUE` if all packages are successfully loaded.
 #' @export
 load_graph_deps <- function() {
-  pkgs <- c("lidR", "dbscan", "igraph", "dplyr", "tibble", "purrr", "stats", "geometry")
+  pkgs <- c("lidR", "dbscan", "igraph", "dplyr", "tibble", "purrr", "stats", "geometry", "lidar.metrics")
   for (pkg in pkgs) {
     suppressMessages(require(pkg, character.only = TRUE))
   }
@@ -107,3 +107,4 @@ voxel_structure_metrics <- function(z, x, y) {
     point_count = nrow(coords)
   ))
 }
+

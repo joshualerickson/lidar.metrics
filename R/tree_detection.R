@@ -47,8 +47,6 @@ tree_detection <- function(las,
       return(named_zero_metrics('trees'))
     }
 
-    if (is.null(chm)) return(named_zero_metrics("trees"))
-
     coords <- sf::st_coordinates(trees)
     z_vals <- trees$Z
 

@@ -41,9 +41,6 @@ canopy_cover_metrics <- function(x, y, z,
 
   if(QL1) {
 
-    #las_filtered <- lidR::filter_poi(las, ReturnNumber == 1)
-
-    #las_filtered <- lidR::decimate_points(las, algorithm = lidR::random_per_voxel(n = n, res = res))
     las_filtered <- lidR::decimate_points(las, algorithm = lidR::homogenize(density = n, res = res))
 
 

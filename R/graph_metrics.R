@@ -12,14 +12,13 @@
 #' @param z_20 Midstory lower bound (default: 6 m).
 #' @param z_40 Midstory upper bound (default: 12 m).
 #' @param voxel_res Numeric, voxel resolution in XY plane (default: 3).
-#' @param scan_angle Numeric vector of ScanAngle from the LAS file.
-#' @param psid Numeric vector of PointSourceID from the LAS file.
-#' @param return_number Numeric vector of ReturnNumber from the LAS file.
+#' @param psid unquoted `PointSourceID` from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
 #' @param n Numeric to pass to `lidR::random_per_voxel()` density argument.
 #' @param res Numeric to pass to `lidR::random_per_voxel()` res argument.
 #'
 #' @return A named list of graph-theoretic metrics for each bin (understory, midstory).
+#' @note The bounds for `z_1, ,z_20, and z_40` can be whatever you want but with always be labelled `understory_` and `midstory_`.
 #' @export
 
 connectivity_metrics_binned <- function(x, y, z,
@@ -28,9 +27,7 @@ connectivity_metrics_binned <- function(x, y, z,
                                         z_20 = 6,
                                         z_40 = 12,
                                         voxel_res = 3,
-                                        scan_angle,
                                         psid,
-                                        return_number,
                                         QL1 = FALSE,
                                         n = 1,
                                         res = 3) {
@@ -46,9 +43,7 @@ connectivity_metrics_binned <- function(x, y, z,
   las_all <- suppressMessages(lidR::LAS(data.frame(X = x,
                                                    Y = y,
                                                    Z = z,
-                                                   ScanAngle = scan_angle,
-                                                   PointSourceID = psid,
-                                                   ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number)))))
+                                                   PointSourceID = psid)))
 
   results <- purrr::map(bins, function(b) {
     tryCatch({
@@ -203,3 +198,45 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1
 
   return(results)
 }
+
+#' Compute Voxel-Level Structure Metrics
+#'
+#' Calculates structural metrics for a voxel such as convex hull volume
+#' (normalized), spatial variance, and point count.
+#'
+#' @param z Z coordinates (height) within the voxel.
+#' @param x X coordinates within the voxel.
+#' @param y Y coordinates within the voxel.
+#'
+#' @return A named list with `convex_hull_vol`, `norm_var`, and `point_count`.
+#' @export
+
+voxel_structure_metrics <- function(z, x, y) {
+  coords <- cbind(x, y, z)
+
+  # If not enough points, return fallback values
+  if (nrow(coords) < 4) {
+    var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
+    return(list(
+      convex_hull_vol = 0,
+      norm_var = var_xyz,
+      point_count = nrow(coords)
+    ))
+  }
+
+  # Try computing 3D convex hull volume
+  hull_volume <- tryCatch({
+    ch <- geometry::convhulln(coords, options = "FA")
+    as.numeric(ch$vol)
+  }, error = function(e) 0)
+
+  # Compute normalized variance of spatial coordinates
+  var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
+
+  return(list(
+    convex_hull_vol = log1p(hull_volume/nrow(coords)),
+    norm_var = var_xyz,
+    point_count = nrow(coords)
+  ))
+}
+

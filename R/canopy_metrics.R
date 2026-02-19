@@ -6,11 +6,11 @@
 #' @param x Numeric vector of X coordinates.
 #' @param y Numeric vector of Y coordinates.
 #' @param z Numeric vector of Z (height) values.
-#' @param psid Numeric vector of PointSourceID from the LAS file.
-#' @param return_number Numeric vector of ReturnNumber from the LAS file.
+#' @param psid unquoted `PointSourceID` from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
 #' @param density Numeric to pass to `lidR::homogenize()` density argument.
 #' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
+#' @param ... Arguments to pass to `lidar.metrics::tree_detection()`.
 #'
 #' @return A named list with metrics including:
 #' \itemize{
@@ -21,10 +21,9 @@
 #' @export
 canopy_cover_metrics <- function(x, y, z,
                                  psid,
-                                 return_number,
                                  QL1 = FALSE,
                                  n = 15,
-                                 res = 3) {
+                                 res = 3, ...) {
   # Safety check for low point count
   if (length(z) < 5) return(c(named_zero_metrics('trees'), named_zero_metrics('canopy')))
 
@@ -33,8 +32,7 @@ canopy_cover_metrics <- function(x, y, z,
     X = x,
     Y = y,
     Z = z,
-    PointSourceID = psid,
-    ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number))
+    PointSourceID = psid
   )))
 
   if (is.empty(las)) return(c(named_zero_metrics('trees'), named_zero_metrics('canopy')))
@@ -93,7 +91,7 @@ canopy_cover_metrics <- function(x, y, z,
     error = function(e) named_zero_metrics(type = 'canopy')
   )
 
-  trees <- tryCatch(tree_detection(las_filtered),
+  trees <- tryCatch(tree_detection(las_filtered, ...),
                     error = function(e) named_zero_metrics(type = 'trees'))
 
   # Final output as valid named list

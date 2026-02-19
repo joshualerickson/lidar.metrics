@@ -31,7 +31,7 @@ remotes::install_github("joshualerickson/lidar.metrics")
 
 ## Details  
 
-If using in parallel with `{future}`, we've noticed that you need to namspace call the function when processing a catalog (see below).
+If using in parallel with `{future}`, we've noticed that you need to namspace call the function (`lidar.metrics::`) when processing a catalog (see below).
 
 ```{r, eval = FALSE}
 
@@ -85,6 +85,7 @@ laz_graph_metrics <- pixel_metrics(laz_test, connectivity_metrics_binned(X, Y, Z
                                                               z_1 = 0.3, 
                                                               z_20 = 6.1, 
                                                               z_40 = 12.1,
+                                                              psid =  PointSourceID,
                                                               voxel_res = 3), res = 30)
 
 plot(laz_graph_metrics[[1:6]])
@@ -97,24 +98,14 @@ plot(laz_graph_metrics[[1:6]])
 # window function
 wf <- function(x) {x*0.17 + 3}
 
-laz_canopy_metrics <- suppressMessages(pixel_metrics(laz_test, canopy_cover_metrics(X, Y, Z, ReturnNumber,
-                                                                    window_func = wf,
-                                                                   out_dir = NULL), res = 30))
+laz_canopy_metrics <- suppressMessages(pixel_metrics(laz_test, canopy_cover_metrics(X, Y, Z,
+                                                                                    psid = PointSourceID,
+                                                                                    window_func = wf), res = 30))
 
 plot(laz_canopy_metrics)
 
 ```
 
-## Stratum Metrics  
-
-```{r}
-
-laz_strata_metrics <- suppressMessages(pixel_metrics(laz_test, StrataMetrics(Z , r = ReturnNumber), res = 30))
-
-plot(laz_strata_metrics[[1:12]], cex.main = 0.5)
-
-
-```
 
 
 

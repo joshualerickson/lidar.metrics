@@ -41,10 +41,7 @@ named_zero_metrics <- function(type = 'graph') {
       n_strata_upper = 0,
       n_gt_6_1 = 0,
       n_gt_12_1 = 0,
-      n_gt_24_1 = 0,
-      topo_residual_sd = NA_real_,
-      topo_entropy = NA_real_,
-      smoothness_score = NA_real_
+      n_gt_24_1 = 0
     ))
   } else {
     stop("Invalid type. Must be 'graph' or 'canopy'.")
@@ -64,47 +61,5 @@ load_graph_deps <- function() {
     suppressMessages(require(pkg, character.only = TRUE))
   }
   invisible(TRUE)
-}
-
-
-#' Compute Voxel-Level Structure Metrics
-#'
-#' Calculates structural metrics for a voxel such as convex hull volume
-#' (normalized), spatial variance, and point count.
-#'
-#' @param z Z coordinates (height) within the voxel.
-#' @param x X coordinates within the voxel.
-#' @param y Y coordinates within the voxel.
-#'
-#' @return A named list with `convex_hull_vol`, `norm_var`, and `point_count`.
-#' @export
-
-voxel_structure_metrics <- function(z, x, y) {
-  coords <- cbind(x, y, z)
-
-  # If not enough points, return fallback values
-  if (nrow(coords) < 4) {
-    var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
-    return(list(
-      convex_hull_vol = 0,
-      norm_var = var_xyz,
-      point_count = nrow(coords)
-    ))
-  }
-
-  # Try computing 3D convex hull volume
-  hull_volume <- tryCatch({
-    ch <- geometry::convhulln(coords, options = "FA")
-    as.numeric(ch$vol)
-  }, error = function(e) 0)
-
-  # Compute normalized variance of spatial coordinates
-  var_xyz <- mean(apply(coords, 2, var), na.rm = TRUE)
-
-  return(list(
-    convex_hull_vol = log1p(hull_volume/nrow(coords)),
-    norm_var = var_xyz,
-    point_count = nrow(coords)
-  ))
 }
 

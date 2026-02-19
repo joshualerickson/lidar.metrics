@@ -4,7 +4,7 @@
 \alias{canopy_cover_metrics}
 \title{Compute Canopy Cover}
 \usage{
-canopy_cover_metrics(x, y, z, return_number, zmax)
+canopy_cover_metrics(x, y, z, psid, QL1 = FALSE, n = 15, res = 3, ...)
 }
 \arguments{
 \item{x}{Numeric vector of X coordinates.}
@@ -13,14 +13,21 @@ canopy_cover_metrics(x, y, z, return_number, zmax)
 
 \item{z}{Numeric vector of Z (height) values.}
 
-\item{return_number}{Integer vector of return numbers (e.g., from LAS file).}
+\item{psid}{unquoted \code{PointSourceID} from the LAS file.}
 
-\item{zmax}{Numeric vector for VIC.}
+\item{QL1}{logical for whether to QL1 methods or not. Default (FALSE)}
+
+\item{...}{Arguments to pass to \code{lidar.metrics::tree_detection()}.}
+
+\item{density}{Numeric to pass to \code{lidR::homogenize()} density argument.}
+
+\item{dec_res}{Numeric to pass to \code{lidR::homogenize()} res argument.}
 }
 \value{
 A named list with metrics including:
 \itemize{
 \item \code{fractional_canopy_cover}
+\item \code{rumple_index}
 \item \code{LAI}, \code{LAD_max}, \code{LAD_mean}, \code{LAD_z_max}
 }
 }

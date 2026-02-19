@@ -4,6 +4,7 @@
 # lidar.metrics
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
 The goal of lidar.metrics is to provide multipurpose functions for
@@ -22,7 +23,8 @@ remotes::install_github("joshualerickson/lidar.metrics")
 ## Details
 
 If using in parallel with `{future}`, we’ve noticed that you need to
-namspace call the function when processing a catalog (see below).
+namspace call the function (`lidar.metrics::`) when processing a catalog
+(see below).
 
 ``` r
 
@@ -49,9 +51,6 @@ library(lidar.metrics)
 
 laz_test <- readLAS('data/testLAS.laz')
 #> [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s     [                                                  ] -2147483648% ETA: -2147483648s                                                                                     
-```
-
-``` r
 
 # if using a catalog feel free to do your pre-processing
 
@@ -79,7 +78,12 @@ laz_graph_metrics <- pixel_metrics(laz_test, connectivity_metrics_binned(X, Y, Z
                                                               z_1 = 0.3, 
                                                               z_20 = 6.1, 
                                                               z_40 = 12.1,
+                                                              psid =  PointSourceID,
                                                               voxel_res = 3), res = 30)
+#> Warning in max(closeness_vals, na.rm = TRUE): no non-missing arguments to max;
+#> returning -Inf
+#> Warning in max(closeness_vals, na.rm = TRUE): no non-missing arguments to max;
+#> returning -Inf
 
 plot(laz_graph_metrics[[1:6]])
 ```
@@ -92,22 +96,12 @@ plot(laz_graph_metrics[[1:6]])
 # window function
 wf <- function(x) {x*0.17 + 3}
 
-laz_canopy_metrics <- suppressMessages(pixel_metrics(laz_test, canopy_cover_metrics(X, Y, Z, ReturnNumber,
-                                                                    window_func = wf,
-                                                                   out_dir = NULL), res = 30))
+laz_canopy_metrics <- suppressMessages(pixel_metrics(laz_test, canopy_cover_metrics(X, Y, Z,
+                                                                                    psid = PointSourceID,
+                                                                                    return_number = ReturnNumber,
+                                                                                    window_func = wf), res = 30))
 
 plot(laz_canopy_metrics)
 ```
 
 <img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
-
-## Stratum Metrics
-
-``` r
-
-laz_strata_metrics <- suppressMessages(pixel_metrics(laz_test, StrataMetrics(Z , r = ReturnNumber), res = 30))
-
-plot(laz_strata_metrics[[1:12]], cex.main = 0.5)
-```
-
-<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />

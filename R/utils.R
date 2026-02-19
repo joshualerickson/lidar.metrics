@@ -17,7 +17,6 @@ named_zero_metrics <- function(type = 'graph') {
       avg_path_length = NA_real_,
       eigen_ratio = NA_real_,
       graph_density = 0,
-      mean_abs_sa = NA_real_,
       n_m2 = 0
     ))
   } else if (type == 'canopy') {

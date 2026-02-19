@@ -100,6 +100,7 @@ wf <- function(x) {x*0.17 + 3}
 
 laz_canopy_metrics <- suppressMessages(pixel_metrics(laz_test, canopy_cover_metrics(X, Y, Z,
                                                                                     psid = PointSourceID,
+                                                                                    return_number = ReturnNumber,
                                                                                     window_func = wf), res = 30))
 
 plot(laz_canopy_metrics)

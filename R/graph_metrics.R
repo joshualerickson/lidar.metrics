@@ -92,8 +92,6 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1
 
   las_filtered <- lidR::filter_poi(las, Z >= z_min & Z <= z_max)
 
-  mean_abs_sa <- abs(mean(las_filtered@data$ScanAngle, na.rm = T))
-
   if(QL1) {
 
 
@@ -192,8 +190,7 @@ compute_graph_metrics <- function(las, z_min, z_max, edge_thresh, voxel_res, QL1
 
 
     graph_density = tryCatch(igraph::edge_density(g), error = function(e) 0),
-    n_m2 = length(las_filtered@data$Z)/(30*30),
-    mean_abs_sa = mean_abs_sa
+    n_m2 = length(las_filtered@data$Z)/(30*30)
   )
 
   return(results)

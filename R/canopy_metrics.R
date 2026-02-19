@@ -7,6 +7,7 @@
 #' @param y Numeric vector of Y coordinates.
 #' @param z Numeric vector of Z (height) values.
 #' @param psid unquoted `PointSourceID` from the LAS file.
+#' @param return_number unquoted `ReturnNumber` from the LAS file.
 #' @param QL1 logical for whether to QL1 methods or not. Default (FALSE)
 #' @param density Numeric to pass to `lidR::homogenize()` density argument.
 #' @param dec_res Numeric to pass to `lidR::homogenize()` res argument.
@@ -21,6 +22,7 @@
 #' @export
 canopy_cover_metrics <- function(x, y, z,
                                  psid,
+                                 return_number,
                                  QL1 = FALSE,
                                  n = 15,
                                  res = 3, ...) {
@@ -32,7 +34,8 @@ canopy_cover_metrics <- function(x, y, z,
     X = x,
     Y = y,
     Z = z,
-    PointSourceID = psid
+    PointSourceID = psid,
+    ReturnNumber = as.integer(ifelse(return_number > 7, 7L, return_number))
   )))
 
   if (is.empty(las)) return(c(named_zero_metrics('trees'), named_zero_metrics('canopy')))

@@ -4,7 +4,17 @@
 \alias{canopy_cover_metrics}
 \title{Compute Canopy Cover}
 \usage{
-canopy_cover_metrics(x, y, z, psid, QL1 = FALSE, n = 15, res = 3, ...)
+canopy_cover_metrics(
+  x,
+  y,
+  z,
+  psid,
+  return_number,
+  QL1 = FALSE,
+  n = 15,
+  res = 3,
+  ...
+)
 }
 \arguments{
 \item{x}{Numeric vector of X coordinates.}
